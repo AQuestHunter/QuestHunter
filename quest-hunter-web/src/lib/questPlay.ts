@@ -105,6 +105,7 @@ export async function submitPuzzleAnswer(
   attempt: string,
 ): Promise<{
   correct: boolean
+  fatal: boolean
   error: string | null
 }> {
   const { data, error } = await supabase.rpc('submit_puzzle_answer', {
@@ -112,15 +113,16 @@ export async function submitPuzzleAnswer(
     p_puzzle_id: puzzleId,
     p_attempt: attempt,
   })
-  if (error) return { correct: false, error: error.message }
+  if (error) return { correct: false, fatal: false, error: error.message }
   const r = data as Record<string, unknown>
   if (r && r.ok === false) {
     return {
       correct: false,
+      fatal: false,
       error: typeof r.error === 'string' ? r.error : 'unknown',
     }
   }
-  return { correct: r.correct === true, error: null }
+  return { correct: r.correct === true, fatal: r.fatal === true, error: null }
 }
 
 export async function submitFinale(

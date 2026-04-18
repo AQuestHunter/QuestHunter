@@ -99,6 +99,8 @@ export type Database = {
           state: Json
           completed_at: string | null
           started_at: string | null
+          failed_at: string | null
+          failed_puzzle_key: string | null
           updated_at: string
         }
         Insert: {
@@ -109,6 +111,8 @@ export type Database = {
           state?: Json
           completed_at?: string | null
           started_at?: string | null
+          failed_at?: string | null
+          failed_puzzle_key?: string | null
           updated_at?: string
         }
         Update: {
@@ -119,6 +123,8 @@ export type Database = {
           state?: Json
           completed_at?: string | null
           started_at?: string | null
+          failed_at?: string | null
+          failed_puzzle_key?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -185,6 +191,10 @@ export type Database = {
       }
       run_quest_archive_sweep_admin: {
         Args: Record<string, never>
+        Returns: Json
+      }
+      reset_campaign_quest_progress_admin: {
+        Args: { p_campaign_slug: string }
         Returns: Json
       }
       get_player_resolved_quest_summary: {

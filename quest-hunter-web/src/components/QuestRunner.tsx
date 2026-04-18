@@ -22,6 +22,8 @@ export function QuestRunner({ summary, onDone }: Props) {
   const [busy, setBusy] = useState(false)
   const [shake, setShake] = useState(false)
   const [attempt, setAttempt] = useState('')
+  const [puzzleError, setPuzzleError] = useState<string | null>(null)
+  const [choiceConfirm, setChoiceConfirm] = useState<string | null>(null)
   const [finaleError, setFinaleError] = useState<string | null>(null)
   const [introAck, setIntroAck] = useState(false)
 
@@ -29,13 +31,15 @@ export function QuestRunner({ summary, onDone }: Props) {
     step: number
     completed_at: string | null
     branch: string | null
+    failed_at: string | null
+    failed_puzzle_key: string | null
   } | null>(null)
 
   const reloadProgress = useCallback(async () => {
     if (!user?.id) return
     const { data, error } = await supabase
       .from('user_quest_progress')
-      .select('step, completed_at, branch')
+      .select('step, completed_at, branch, failed_at, failed_puzzle_key')
       .eq('user_id', user.id)
       .eq('quest_id', summary.id)
       .maybeSingle()
@@ -46,7 +50,7 @@ export function QuestRunner({ summary, onDone }: Props) {
     }
 
     if (!data) {
-      setProg({ step: 0, completed_at: null, branch: null })
+      setProg({ step: 0, completed_at: null, branch: null, failed_at: null, failed_puzzle_key: null })
       return
     }
 
@@ -54,6 +58,8 @@ export function QuestRunner({ summary, onDone }: Props) {
       step: data.step,
       completed_at: data.completed_at,
       branch: data.branch,
+      failed_at: (data as { failed_at?: string | null }).failed_at ?? null,
+      failed_puzzle_key: (data as { failed_puzzle_key?: string | null }).failed_puzzle_key ?? null,
     })
   }, [summary.id, user?.id])
 
@@ -96,21 +102,24 @@ export function QuestRunner({ summary, onDone }: Props) {
   const step = prog?.step ?? 0
   const completedAt = prog?.completed_at ?? null
   const finaleBranch = prog?.branch ?? null
+  const failedAt = prog?.failed_at ?? null
 
   const ui = useMemo(() => mergeQuestUi(payload?.ui), [payload?.ui])
 
   const phase = useMemo(() => {
     if (!payload || !prog) return 'loading'
     if (completedAt) return 'done'
+    if (failedAt) return 'failed'
     if (step < puzzles.length) return 'puzzle'
     return 'finale'
-  }, [completedAt, payload, prog, puzzles.length, step])
+  }, [completedAt, failedAt, payload, prog, puzzles.length, step])
 
   const currentPuzzle = puzzles[step]
 
   async function onSubmitPuzzle(e: FormEvent) {
     e.preventDefault()
     if (!currentPuzzle || busy) return
+    setPuzzleError(null)
     setBusy(true)
     const res = await submitPuzzleAnswer(summary.id, currentPuzzle.id, attempt)
     setBusy(false)
@@ -122,10 +131,22 @@ export function QuestRunner({ summary, onDone }: Props) {
       return
     }
 
+    if (res.error) {
+      setPuzzleError(res.error)
+      setShake(true)
+      window.setTimeout(() => setShake(false), 420)
+      setAttempt('')
+      return
+    }
+
     if (!res.correct) {
       setShake(true)
       window.setTimeout(() => setShake(false), 420)
       setAttempt('')
+      if (res.fatal) {
+        await reloadProgress()
+        await refreshProfile()
+      }
       return
     }
 
@@ -222,8 +243,26 @@ export function QuestRunner({ summary, onDone }: Props) {
     )
   }
 
+  if (phase === 'failed') {
+    return (
+      <article className={`quest-terminal quiz-surface quiz-error ${shake ? 'shake' : ''}`}>
+        <div className="quiz-error-inner">
+          <p className="quiz-error-label mono">Dossier sealed</p>
+          <p className="quiz-error-msg">
+            You made a one-shot call and missed. ORACLE does not grant a second run on this dossier.
+          </p>
+          <p className="muted small quiz-complete-note">
+            Tip: this mechanic is used only on specific choices. Most puzzles still allow retries.
+          </p>
+        </div>
+      </article>
+    )
+  }
+
   if (phase === 'puzzle' && currentPuzzle) {
     const isChoice = currentPuzzle.inputType === 'choice' && (currentPuzzle.choices?.length ?? 0) > 0
+    const isSingleAttemptChoice = Boolean(isChoice && currentPuzzle.singleAttempt)
+    const isFatalChoice = Boolean(isChoice && currentPuzzle.fatalWrong)
 
     const progressPct = puzzles.length > 0 ? ((step + 1) / puzzles.length) * 100 : 0
 
@@ -248,24 +287,61 @@ export function QuestRunner({ summary, onDone }: Props) {
           ) : null}
 
           {isChoice ? (
-            <div className="choice-grid">
+            <div className="choice-shell">
+              {isSingleAttemptChoice ? (
+                <div className="choice-warning" role="note">
+                  <p className="mono small choice-warning-title">One-shot choice</p>
+                  <p className="muted small choice-warning-text">
+                    First click arms the answer. Second click confirms. After that, this puzzle locks.
+                    {isFatalChoice ? ' A wrong choice seals the dossier.' : null}
+                  </p>
+                </div>
+              ) : null}
+              {puzzleError ? (
+                <p className="mono error small" role="alert">
+                  {puzzleError}
+                </p>
+              ) : null}
+              <div className="choice-grid">
               {currentPuzzle.choices!.map((c, i) => (
                 <button
                   key={c}
                   type="button"
-                  className="choice-btn mono"
+                  className={`choice-btn mono ${choiceConfirm === c ? 'choice-btn--armed' : ''}`}
                   disabled={busy}
                   onClick={() => {
-                    setAttempt(c)
                     void (async () => {
+                      setPuzzleError(null)
+                      if (isSingleAttemptChoice) {
+                        if (choiceConfirm !== c) {
+                          setChoiceConfirm(c)
+                          return
+                        }
+                      }
+
+                      setAttempt(c)
                       setBusy(true)
                       const res = await submitPuzzleAnswer(summary.id, currentPuzzle.id, c)
                       setBusy(false)
-                      if (!res.correct || res.error) {
+
+                      if (res.error) {
+                        setPuzzleError(res.error)
                         setShake(true)
                         window.setTimeout(() => setShake(false), 420)
                         return
                       }
+
+                      if (!res.correct) {
+                        setShake(true)
+                        window.setTimeout(() => setShake(false), 420)
+                        if (res.fatal) {
+                          await reloadProgress()
+                          await refreshProfile()
+                        }
+                        return
+                      }
+
+                      setChoiceConfirm(null)
                       await reloadProgress()
                       await refreshProfile()
                     })()
@@ -277,6 +353,7 @@ export function QuestRunner({ summary, onDone }: Props) {
                   <span className="choice-label">{c}</span>
                 </button>
               ))}
+              </div>
             </div>
           ) : (
             <form className="puzzle-form quiz-answer-form" onSubmit={(e) => void onSubmitPuzzle(e)}>
@@ -297,6 +374,11 @@ export function QuestRunner({ summary, onDone }: Props) {
                   {busy ? ui.submitBusyLabel : ui.submitLabel}
                 </button>
               </div>
+              {puzzleError ? (
+                <p className="mono error small" role="alert">
+                  {puzzleError}
+                </p>
+              ) : null}
             </form>
           )}
         </div>

@@ -47,6 +47,16 @@ export type QuestBody = {
     xp?: number
     inputType: PuzzleInputType
     choices?: string[]
+    /**
+     * If true, the player only gets one submission for this puzzle.
+     * Enforced server-side via `answer_attempts`.
+     */
+    singleAttempt?: boolean
+    /**
+     * If true and the player answers wrong, the quest is sealed for that player.
+     * Enforced server-side via `user_quest_progress.failed_at`.
+     */
+    fatalWrong?: boolean
   }[]
   finalePrompt: string
   /** Optional override; default server-side 75 XP */
@@ -64,6 +74,8 @@ export type PlayerQuestPayload = {
     hint?: string
     inputType: PuzzleInputType
     choices?: string[]
+    singleAttempt?: boolean
+    fatalWrong?: boolean
   }[]
   finalePrompt: string
   ui?: QuestUiCopy

@@ -18,6 +18,9 @@ const DEFAULT_ADMIN_NEXT_AFTER = {
   INFLUENCE: 'Next quest after INFLUENCE',
 } as const
 
+const BRANCH_KEYS = ['CONTROL', 'OBSERVE', 'INFLUENCE'] as const
+type BranchKey = (typeof BRANCH_KEYS)[number]
+
 const QUEST_SELECT_CAMPAIGN =
   'id, slug, title, body, starts_at, ends_at, is_published, archived, campaign_slug, campaign_display_name, sequence_idx, next_control_id, next_observe_id, next_influence_id'
 const QUEST_SELECT_LEGACY =
@@ -273,6 +276,7 @@ export function AdminQuestsPanel() {
   const [showArchived, setShowArchived] = useState(false)
   const [sweepBusy, setSweepBusy] = useState(false)
   const [campaignFilter, setCampaignFilter] = useState<string>('')
+  const [projectBulkBusy, setProjectBulkBusy] = useState<Record<string, boolean>>({})
 
   const [slug, setSlug] = useState('')
   const [title, setTitle] = useState('')
@@ -293,6 +297,11 @@ export function AdminQuestsPanel() {
   const [nextControlId, setNextControlId] = useState('')
   const [nextObserveId, setNextObserveId] = useState('')
   const [nextInfluenceId, setNextInfluenceId] = useState('')
+  /**
+   * Convenience: mark this chapter as the branch-specific follow-up of the previous chapter.
+   * When set, saving will auto-fill the previous chapter's next_* pointer (without overwriting a different manual choice).
+   */
+  const [variantOfPrevBranch, setVariantOfPrevBranch] = useState<'' | BranchKey>('')
   const [adminNextAfterControlLabel, setAdminNextAfterControlLabel] = useState('')
   const [adminNextAfterObserveLabel, setAdminNextAfterObserveLabel] = useState('')
   const [adminNextAfterInfluenceLabel, setAdminNextAfterInfluenceLabel] = useState('')
@@ -488,6 +497,75 @@ export function AdminQuestsPanel() {
     return [...others].sort(compareQuestRowsAdminOrder)
   }, [rows, editingId])
 
+  async function setProjectPublishState(camp: string, publish: boolean) {
+    if (!hasCampaignSchema) {
+      setError('Project-wide publish requires the campaign/branching migration.')
+      return
+    }
+    const verb = publish ? 'publish' : 'unpublish'
+    const ok = window.confirm(
+      `This will ${verb} all non-archived quests in “${camp}”.\n\nProceed?`,
+    )
+    if (!ok) return
+
+    setProjectBulkBusy((prev) => ({ ...prev, [camp]: true }))
+    setError(null)
+
+    const { error: err } = await supabase
+      .from('quests')
+      .update({ is_published: publish, updated_at: new Date().toISOString() })
+      .eq('campaign_slug', camp)
+      .eq('archived', false)
+
+    setProjectBulkBusy((prev) => ({ ...prev, [camp]: false }))
+
+    if (err) {
+      setError(err.message)
+      return
+    }
+
+    await loadRows()
+  }
+
+  /** Clears all player progress + puzzle attempt logs for this campaign (admin RPC). Does not change profile XP totals. */
+  async function resetCampaignPlayerProgress(camp: string) {
+    if (!hasCampaignSchema) {
+      setError('Project reset requires the campaign/branching migration.')
+      return
+    }
+    const ok = window.confirm(
+      `Reset ALL player progress for project “${camp}”?\n\n` +
+        `This removes completion state and puzzle attempts for every quest in this project, for every player — they must play through again.\n\n` +
+        `Profile XP totals are not reduced.\n\n` +
+        `Continue?`,
+    )
+    if (!ok) return
+    const ok2 = window.confirm(
+      `Final confirmation: permanently delete saved progress for “${camp}” for all users?`,
+    )
+    if (!ok2) return
+
+    setProjectBulkBusy((prev) => ({ ...prev, [camp]: true }))
+    setError(null)
+
+    const { data, error: err } = await supabase.rpc('reset_campaign_quest_progress_admin', {
+      p_campaign_slug: camp,
+    })
+
+    setProjectBulkBusy((prev) => ({ ...prev, [camp]: false }))
+
+    if (err) {
+      setError(err.message)
+      return
+    }
+    const r = data as { ok?: boolean; error?: string; deleted_progress_rows?: number; deleted_attempt_rows?: number }
+    if (r && r.ok === false) {
+      setError(r.error ?? 'reset failed')
+      return
+    }
+    await loadRows()
+  }
+
   async function runArchiveSweep() {
     setSweepBusy(true)
     setError(null)
@@ -524,6 +602,7 @@ export function AdminQuestsPanel() {
     setNextControlId('')
     setNextObserveId('')
     setNextInfluenceId('')
+    setVariantOfPrevBranch('')
     setAdminNextAfterControlLabel('')
     setAdminNextAfterObserveLabel('')
     setAdminNextAfterInfluenceLabel('')
@@ -532,6 +611,20 @@ export function AdminQuestsPanel() {
 
   function editRow(row: QuestRow) {
     const body = parseBody(row.body)
+    const inferredVariant =
+      hasCampaignSchema && rows.length > 0
+        ? (BRANCH_KEYS.find((k) => {
+            const prevSeq = (row.sequence_idx ?? 1) - 1
+            if (prevSeq < 1) return false
+            const parent = rows
+              .filter((r) => (r.campaign_slug || 'default') === (row.campaign_slug || 'default') && r.sequence_idx === prevSeq)
+              .sort(compareWithinProject)[0]
+            if (!parent) return false
+            const targetId =
+              k === 'CONTROL' ? parent.next_control_id : k === 'OBSERVE' ? parent.next_observe_id : parent.next_influence_id
+            return !!targetId && targetId === row.id
+          }) ?? '')
+        : ''
     setEditingId(row.id)
     setSlug(row.slug)
     setTitle(row.title)
@@ -550,6 +643,7 @@ export function AdminQuestsPanel() {
     setNextControlId(row.next_control_id ?? '')
     setNextObserveId(row.next_observe_id ?? '')
     setNextInfluenceId(row.next_influence_id ?? '')
+    setVariantOfPrevBranch(inferredVariant)
     setAdminNextAfterControlLabel(body.admin?.nextAfterControlLabel?.trim() ?? '')
     setAdminNextAfterObserveLabel(body.admin?.nextAfterObserveLabel?.trim() ?? '')
     setAdminNextAfterInfluenceLabel(body.admin?.nextAfterInfluenceLabel?.trim() ?? '')
@@ -669,12 +763,50 @@ export function AdminQuestsPanel() {
       ? await supabase.from('quests').update(payload).eq('id', editingId).select('id').maybeSingle()
       : await supabase.from('quests').insert(payload).select('id').maybeSingle()
 
-    setSaving(false)
     if (q.error) {
+      setSaving(false)
       setError(q.error.message)
       return
     }
 
+    // Auto-wire previous chapter's branch pointer to this quest (if requested).
+    if (hasCampaignSchema && variantOfPrevBranch && q.data?.id) {
+      const prevSeq = seqClean - 1
+      if (prevSeq >= 1) {
+        const parent = rows
+          .filter((r) => (r.campaign_slug || 'default') === campClean && r.sequence_idx === prevSeq)
+          .sort(compareWithinProject)[0]
+        if (parent) {
+          const currentTargetId =
+            variantOfPrevBranch === 'CONTROL'
+              ? parent.next_control_id
+              : variantOfPrevBranch === 'OBSERVE'
+                ? parent.next_observe_id
+                : parent.next_influence_id
+
+          // Don't overwrite a different manual choice.
+          if (!currentTargetId || currentTargetId === q.data.id) {
+            const patch =
+              variantOfPrevBranch === 'CONTROL'
+                ? { next_control_id: q.data.id }
+                : variantOfPrevBranch === 'OBSERVE'
+                  ? { next_observe_id: q.data.id }
+                  : { next_influence_id: q.data.id }
+            const { error: parentErr } = await supabase
+              .from('quests')
+              .update({ ...patch, updated_at: new Date().toISOString() })
+              .eq('id', parent.id)
+            if (parentErr) {
+              setSaving(false)
+              setError(parentErr.message)
+              return
+            }
+          }
+        }
+      }
+    }
+
+    setSaving(false)
     resetForm()
     await loadRows()
   }
@@ -769,7 +901,7 @@ export function AdminQuestsPanel() {
         </p>
       ) : null}
 
-      <div className="admin-split">
+      <div className={editingId ? 'admin-split admin-split--editing' : 'admin-split'}>
         <div className="admin-list">
           <div className="admin-list-heading">
             <h2 className="mono small muted admin-list-heading-title">Quests in this workspace</h2>
@@ -904,6 +1036,56 @@ export function AdminQuestsPanel() {
                       >
                         JSON
                       </button>
+                      <div className="admin-project-settings">
+                        <button
+                          type="button"
+                          className="ghost-btn mono small admin-project-setting-btn"
+                          disabled={!hasCampaignSchema || projectBulkBusy[camp] === true}
+                          title={
+                            hasCampaignSchema
+                              ? 'Publish all non-archived quests in this project'
+                              : 'Requires campaign/branching migration'
+                          }
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            void setProjectPublishState(camp, true)
+                          }}
+                        >
+                          {projectBulkBusy[camp] ? '…' : 'Publish all'}
+                        </button>
+                        <button
+                          type="button"
+                          className="ghost-btn mono small admin-project-setting-btn"
+                          disabled={!hasCampaignSchema || projectBulkBusy[camp] === true}
+                          title={
+                            hasCampaignSchema
+                              ? 'Unpublish all non-archived quests in this project'
+                              : 'Requires campaign/branching migration'
+                          }
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            void setProjectPublishState(camp, false)
+                          }}
+                        >
+                          {projectBulkBusy[camp] ? '…' : 'Unpublish all'}
+                        </button>
+                        <button
+                          type="button"
+                          className="ghost-btn mono small admin-project-setting-btn admin-project-setting-btn--danger"
+                          disabled={!hasCampaignSchema || projectBulkBusy[camp] === true}
+                          title={
+                            hasCampaignSchema
+                              ? 'Delete all player progress for this project so everyone must replay from scratch'
+                              : 'Requires campaign/branching migration'
+                          }
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            void resetCampaignPlayerProgress(camp)
+                          }}
+                        >
+                          {projectBulkBusy[camp] ? '…' : 'Reset progress'}
+                        </button>
+                      </div>
                     </div>
                     {isOpen ? (
                       <div className="admin-quest-bucket-stack">
@@ -960,9 +1142,16 @@ export function AdminQuestsPanel() {
         <form className="admin-form stack-form admin-editor-form" onSubmit={(e) => void save(e)}>
           <div className="admin-editor-toolbar">
             <div className="admin-editor-toolbar-top">
-              <h2 className="admin-editor-title mono small muted">
+              <div className="admin-editor-title-row">
+                {editingId ? (
+                  <button type="button" className="ghost-btn mono small admin-mobile-back" onClick={() => resetForm()}>
+                    ← Back
+                  </button>
+                ) : null}
+                <h2 className="admin-editor-title mono small muted">
                 {editingId ? `Edit · ${editingId.slice(0, 8)}…` : 'Create quest'}
               </h2>
+              </div>
               <nav className="admin-editor-tabs" role="tablist" aria-label="Quest editor">
                 {(
                   [
@@ -1118,6 +1307,23 @@ export function AdminQuestsPanel() {
                   onChange={(e) => setSequenceIdx(e.target.value)}
                   min={1}
                 />
+              </label>
+              <label className="field">
+                <span className="mono label-text">This chapter is a variant of the previous one</span>
+                <span className="field-hint muted small">
+                  Convenience helper. When set, saving will auto-fill the previous chapter’s branch “next chapter”
+                  dropdown to point to this quest (without overwriting a different manual choice).
+                </span>
+                <select
+                  className="terminal-input mono"
+                  value={variantOfPrevBranch}
+                  onChange={(e) => setVariantOfPrevBranch(e.target.value as '' | BranchKey)}
+                >
+                  <option value="">— not a variant —</option>
+                  <option value="CONTROL">Variant for CONTROL</option>
+                  <option value="OBSERVE">Variant for OBSERVE</option>
+                  <option value="INFLUENCE">Variant for INFLUENCE</option>
+                </select>
               </label>
               <label className="field">
                 <span className="mono label-text">CONTROL → next chapter</span>

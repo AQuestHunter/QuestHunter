@@ -8,8 +8,9 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg'],
+      includeAssets: ['favicon.svg', 'icons.svg'],
       manifest: {
+        id: '/',
         name: 'Quest Hunter',
         short_name: 'Quest Hunter',
         description: 'Live quest operations, branching dossiers, and operator progress.',
@@ -24,13 +25,14 @@ export default defineConfig({
             src: '/favicon.svg',
             sizes: 'any',
             type: 'image/svg+xml',
-            purpose: 'any',
+            purpose: 'any maskable',
           },
         ],
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,svg,woff2}'],
         navigateFallback: '/index.html',
+        cleanupOutdatedCaches: true,
       },
       devOptions: {
         enabled: false,
