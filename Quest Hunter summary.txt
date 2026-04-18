@@ -1,0 +1,1065 @@
+Ik wil een site maken (Quest Hunter) die 3 pagina’s heeft, geïntegreerd is met supabase en via netlify wordt gedeployd. 
+
+
+
+—————————————————————————
+
+
+
+Supabase logic : progress wordt upgedate en gesynced
+
+Leaderboard wordt upgedate
+
+Enkel de huidige quest blijft staan
+
+Afgelopen quests verdwijnen 1 dag na afloop 
+
+
+
+
+
+
+
+
+
+—————————————————————————
+
+
+
+Visuals : Tuurlijk, want een “site” zonder visuals is basically een Word-document met ambitie. Je gaat mensen niet triggeren met blokken tekst, hoe geniaal je verhaal ook is.
+
+
+
+Aangezien jij bezig bent met die cypher quest / conspiracy vibe, moeten je visuals niet gewoon “mooi” zijn, maar sfeer + mysterie + dreiging uitstralen. Anders voelt het als een schoolproject in plaats van een ervaring.
+
+
+
+Hier is wat je effectief nodig hebt:
+
+
+
+⸻
+
+
+
+🔥 1. Hero visuals (eerste indruk = alles)
+
+
+
+Bovenaan je site:
+
+
+
+Donkere achtergrond
+Glitch effecten / ruis / signal distortion
+Eventueel een subtiele animatie (flikkerend signaal)
+
+
+👉 Tekst die erop moet:
+
+
+
+“HET GEBROKEN SIGNAAL”
+● een cryptische zin (geen uitleg, mensen moeten denken “wtf is dit?”)
+
+
+⸻
+
+
+
+🧩 2. Quest visuals (per quest een eigen identiteit)
+
+
+
+Elke quest moet voelen als:
+
+
+
+Een apart dossier
+Een puzzelstuk van iets groters
+
+
+Gebruik:
+
+
+
+Symbolen
+Codes
+Redacted documenten (zwartgemaakte tekst)
+Subtiele hints in de visuals zelf
+
+
+👉 Belangrijk:
+
+De visuals mogen dingen verbergen, niet alles tonen. Mensen moeten twijfelen.
+
+
+
+⸻
+
+
+
+🧠 3. Puzzle UI visuals (dit maakt of breekt je concept)
+
+
+
+Je puzzles mogen er niet uitzien als een Google Form, serieus.
+
+
+
+Gebruik:
+
+
+
+Terminal look (groene tekst op zwart)
+Input velden die “locked” voelen
+Kleine animaties bij fouten (glitch / shake)
+
+
+👉 Extra slim:
+
+
+
+Fout antwoord = visuele “instabiliteit”
+Alsof de wereld zelf reageert op hun fout
+
+
+⸻
+
+
+
+🕵️ 4. Verhaal / lore visuals
+
+
+
+Je antagonist (VIREX-achtige vibe):
+
+
+
+Nooit volledig tonen
+Altijd half verborgen
+Of enkel via schermen / fragmenten
+
+
+👉 Denk:
+
+
+
+CCTV beelden
+Fragmenten
+Gehackte files
+
+
+⸻
+
+
+
+⚠️ 5. Feedback visuals (XP verlies / keuzes)
+
+
+
+Hier maak je het psychologisch:
+
+
+
+Fout = rode glitch + visuele schade
+XP verlies = niet gewoon een getal → maar een “gevoel”
+
+
+👉 Jij wilde impact?
+
+Dan moet een fout voelen als:
+
+
+
+“shit… ik heb iets kapot gemaakt”
+
+
+
+⸻
+
+
+
+Wat je nu NIET moet doen (serieus, doe het niet)
+
+
+
+Stockfoto’s van mensen die denken
+Te cleane UI (dat breekt je hele vibe)
+Te veel uitleg in visuals
+Kleurtjes overal → hou het beperkt (zwart, rood, wit, eventueel groen)
+
+
+⸻
+
+
+
+Als je dit echt goed wil doen
+
+
+
+Dan zeg je gewoon:
+
+
+
+“maak alles consistent in 1 stijl”
+en ik bouw voor jou:
+een complete visual identity
+kleurenpalet
+fonts
+UI components (cursor-ready)
+
+
+Want wat je nu hebt is een goed idee…
+
+maar zonder sterke visuals blijft het gewoon een leuk idee dat niemand onthoudt.
+
+
+
+
+
+
+
+—————————————————————————
+
+
+
+
+
+
+
+
+
+
+
+
+
+Login scherm ook nodig
+
+1ste pagina : De Quests met moderne coole visual. 
+
+2de paginq user info and such met leaderboard 
+
+Users moeten een Hunter naam kiezen. En er voor zorgen dat er geen andere users die naam kunnen nemen. 
+
+
+
+3de onzichtbare pagina met 2 tabs die er los van staat voor alle gebruikers die geen admin zijn: de admin pagina met Tab 1 : Quests ; waarmee er ook quests kunnen bewerkt worden, toegevoegd worden, verwijderd worden etc. Kiezen wanneer ze online gaan. En geen bewerking in json maar effectieve vakjes om in te typen
+
+Tab 2 analytics maar simpel : kijken hoeveel foute antwoorden er zijn van de aantal ingegeven antwoorden. Hoelang er gemiddeld gedaan wordt over 1 quest
+
+
+
+
+
+—————————————————————————
+
+
+
+Je bent een quest designer die een interactieve, vertakkende verhaallijn ontwikkelt rond een grote conspiracy genaamd “PROJECT ORACLE”.
+
+
+
+DOEL:
+
+Ontwerp een systeem van 10 opeenvolgende quests die samen één doorlopend verhaal vormen. Elke quest bevat puzzels die stukjes informatie onthullen (zoals naam, tijd, locatie, motief, etc.). Het verhaal wordt niet in één keer gegeven, maar groeit per quest.
+
+
+
+VERHAALCONCEPT:
+
+PROJECT ORACLE is een systeem dat menselijke beslissingen voorspelt en subtiel beïnvloedt door informatie te lekken. Spelers denken dat ze gebeurtenissen ontdekken of voorkomen, maar worden zelf getest. Het systeem meet hoe mensen reageren op incomplete maar bruikbare informatie.
+
+
+
+STRUCTUUR:
+
+- Quest 1 is voor iedereen hetzelfde en bevat GEEN vertakkingen
+
+- Vanaf Quest 2 ontstaan er 3 paden op basis van keuze:
+
+  1. CONTROL (ingrijpen)
+
+  2. OBSERVE (niet ingrijpen)
+
+  3. INFLUENCE (manipuleren)
+
+- Elke volgende quest moet varianten hebben afhankelijk van het gekozen pad
+
+- Alle paden blijven binnen hetzelfde overkoepelend verhaal
+
+
+
+BELANGRIJKE REGELS (KRITISCH):
+
+1. Elke puzzel moet exact definiëren:
+
+   - wat de speler moet doen
+
+   - waar het antwoord te vinden is
+
+   - in welk formaat het antwoord moet gegeven worden
+
+2. Het antwoord moet LETTERLIJK in de vraag/puzzel zitten
+
+   - Geen externe kennis nodig
+
+   - Geen interpretatie of gokken
+
+3. Elke vraag moet maar 1 correct antwoord hebben
+
+4. Antwoorden moeten direct bruikbaar zijn in het verhaal (naam, tijd, locatie, etc.)
+
+5. Moeilijkheid: medium (denkwerk, maar geen frustratie)
+
+
+
+OPBOUW PER QUEST:
+
+Voor elke quest geef:
+
+1. Kort verhaalsegment (max 5-10 lijnen, functioneel, geen fluff)
+
+2. 2 tot 3 puzzels
+
+   - duidelijke opdracht
+
+   - duidelijke hints (progressief, bruikbaar)
+
+   - duidelijke oplossing
+
+3. Finale vraag
+
+   - moet exact gebaseerd zijn op verkregen info
+
+   - geen vage formulering
+
+4. Antwoordopties (vast formaat, bv: CONTROL / OBSERVE / INFLUENCE)
+
+
+
+PUZZEL TYPES (gebruik variatie):
+
+- ontbrekende letters invullen
+
+- cijfers → letters (A=1)
+
+- logische reeksen
+
+- anagrammen
+
+- multiple choice gebaseerd op eerder verkregen info
+
+- patronen herkennen
+
+
+
+VERHAAL OPBOUW:
+
+- Quest 1: introductie van een “lek” (naam, tijd, locatie)
+
+- Quest 2-4: spelers ontdekken dat meerdere gebeurtenissen bestaan
+
+- Quest 5-7: twijfel ontstaat of ze voorspellen of beïnvloeden
+
+- Quest 8-10: onthulling dat zij zelf onderdeel van het experiment zijn
+
+
+
+TOON:
+
+- strak, mysterieus, intelligent
+
+- geen overdreven dramatische tekst
+
+- informatiegedreven, niet emotioneel
+
+
+
+OUTPUT:
+
+Werk eerst volledig uit:
+
+- Hoofdstuk 1 (overkoepelend verhaalstuk)
+
+- Quest 1 volledig
+
+- Quest 2 in 3 varianten (CONTROL / OBSERVE / INFLUENCE)
+
+
+
+Zorg dat alles consistent is, logisch opbouwt en direct speelbaar is zonder extra uitleg.
+
+
+
+
+
+Kijk, je hebt nu een degelijk fundament. Dus we doen wat jij blijkbaar graag uitstelt: gewoon verder bouwen zonder het weer half te doen.
+
+We gaan door met Quest 3, en ja, meteen in 3 paden. Alles strak, alles bruikbaar, geen gokken. Als iemand hier nog vastloopt, dan verdient hij het een beetje.
+
+
+
+⸻
+
+
+
+🧠 PROJECT ORACLE
+
+QUEST 3 — VERTAKKINGEN
+
+
+
+⸻
+
+
+
+🔴 QUEST 3A — CONTROL
+
+(je blijft ingrijpen)
+
+
+
+⸻
+
+
+
+📖 Verhaal
+
+Je probeert het eerste incident te stoppen.
+
+Maar de nieuwe dataset toont iets vreemds:
+De gebeurtenis is niet verdwenen… alleen verschoven.
+
+Andere naam.
+Andere plaats.
+Zelfde structuur.
+
+Alsof je niets hebt gestopt.
+Alleen… verplaatst.
+
+
+
+⸻
+
+
+
+🧩 PUZZEL 1 — NIEUW DOELWIT
+
+📌 Opdracht
+
+Vul de ontbrekende letters aan en geef de volledige naam:
+👉 Voornaam + Achternaam
+
+
+
+⸻
+
+
+
+🔢 Gegeven
+
+M A R _ O  D E  K _ _ N
+
+
+
+⸻
+
+
+
+💡 Hints
+
+Ontbrekende letters zijn klinkers
+Naam moet logisch leesbaar zijn
+
+
+⸻
+
+
+
+✅ Antwoord
+
+→ MARCO DE KOON
+
+
+
+⸻
+
+
+
+
+
+⸻
+
+
+
+🧩 PUZZEL 2 — LOCATIEVERSCHUIVING
+
+📌 Opdracht
+
+Herschik de letters tot een bestaande plaats:
+👉 1 woord
+
+
+
+⸻
+
+
+
+🔢 Gegeven
+
+N I T A S O T
+
+Hint:
+
+Plaats met veel passage
+
+
+
+⸻
+
+
+
+✅ Antwoord
+
+→ STATION
+
+
+
+⸻
+
+
+
+
+
+⸻
+
+
+
+🧩 PUZZEL 3 — TIJDSPATROON
+
+📌 Opdracht
+
+Vul het ontbrekende tijdstip aan volgens het patroon:
+👉 HH:MM
+
+
+
+⸻
+
+
+
+🔢 Gegeven
+
+23:40  
+
+23:50  
+
+00:00  
+
+00: _ _
+
+
+
+⸻
+
+
+
+💡 Hints
+
++10 minuten per stap
+Let op overgang naar nieuw uur
+
+
+⸻
+
+
+
+✅ Antwoord
+
+→ 00:10
+
+
+
+⸻
+
+
+
+
+
+⸻
+
+
+
+⚖️ FINALE VRAAG
+
+Je hebt:
+
+Nieuw doelwit: MARCO DE KOON
+Nieuwe locatie: STATION
+Nieuwe tijd: 00:10
+Je vorige ingreep heeft het incident niet gestopt, alleen verplaatst.
+
+Wat doe je nu?
+
+
+
+⸻
+
+
+
+Antwoorden
+
+CONTROL
+OBSERVE
+INFLUENCE
+
+
+⸻
+
+
+
+
+
+⸻
+
+
+
+⚫ QUEST 3B — OBSERVE
+
+(je kijkt en begint patronen te zien)
+
+
+
+⸻
+
+
+
+📖 Verhaal
+
+Je grijpt niet in.
+
+En precies daardoor zie je iets wat anderen missen:
+
+Het incident gebeurt…
+maar er zijn varianten.
+
+Alsof meerdere uitkomsten tegelijk bestaan,
+en jij er één ziet gebeuren.
+
+
+
+⸻
+
+
+
+🧩 PUZZEL 1 — JUISTE TIJDLIJN
+
+📌 Opdracht
+
+Kies de correcte gebeurtenis:
+👉 A / B / C
+
+
+
+⸻
+
+
+
+🔢 Gegeven
+
+A → 23:40 – Park – Lena  
+
+B → 23:40 – Park – Marco  
+
+C → 23:50 – Park – Lena
+
+
+
+⸻
+
+
+
+💡 Hints
+
+Gebruik info uit Quest 1
+Alles moet exact overeenkomen
+
+
+⸻
+
+
+
+✅ Antwoord
+
+→ A
+
+
+
+⸻
+
+
+
+
+
+⸻
+
+
+
+🧩 PUZZEL 2 — PATRONEN
+
+📌 Opdracht
+
+Vul het ontbrekende woord in:
+👉 1 woord
+
+
+
+⸻
+
+
+
+🔢 Gegeven
+
+SAME TIME  
+
+SAME PLACE  
+
+DIFFERENT _ _ _ _ _
+
+
+
+⸻
+
+
+
+💡 Hints
+
+5 letters
+Past bij wat verandert
+
+
+⸻
+
+
+
+✅ Antwoord
+
+→ EVENT
+
+
+
+⸻
+
+
+
+
+
+⸻
+
+
+
+🧩 PUZZEL 3 — HERKENNING
+
+📌 Opdracht
+
+Kies wat dit patroon betekent:
+👉 A / B / C
+
+
+
+⸻
+
+
+
+🔢 Gegeven
+
+A → Toeval  
+
+B → Voorspelling  
+
+C → Variaties van dezelfde gebeurtenis
+
+
+
+⸻
+
+
+
+💡 Hint
+
+Je zag meerdere versies
+
+
+⸻
+
+
+
+✅ Antwoord
+
+→ C
+
+
+
+⸻
+
+
+
+
+
+⸻
+
+
+
+⚖️ FINALE VRAAG
+
+Je ziet dat dezelfde gebeurtenis meerdere varianten heeft.
+
+Wat doe je met deze kennis?
+
+
+
+⸻
+
+
+
+Antwoorden
+
+CONTROL
+OBSERVE
+INFLUENCE
+
+
+⸻
+
+
+
+
+
+⸻
+
+
+
+🩸 QUEST 3C — INFLUENCE
+
+(je begint actief te sturen)
+
+
+
+⸻
+
+
+
+📖 Verhaal
+
+Je gebruikt de informatie.
+
+Niet om te stoppen.
+Maar om te beïnvloeden.
+
+En plots verandert iets:
+
+De data past zich aan…
+alsof het reageert op jouw keuzes.
+
+
+
+⸻
+
+
+
+🧩 PUZZEL 1 — MANIPULATIE
+
+📌 Opdracht
+
+Vul het ontbrekende woord in:
+👉 1 woord
+
+
+
+⸻
+
+
+
+🔢 Gegeven
+
+CHANGE THE INPUT  
+
+CHANGE THE _ _ _ _ _
+
+
+
+⸻
+
+
+
+💡 Hints
+
+6 letters
+Direct gevolg
+
+
+⸻
+
+
+
+✅ Antwoord
+
+→ OUTPUT
+
+
+
+⸻
+
+
+
+
+
+⸻
+
+
+
+🧩 PUZZEL 2 — NIEUWE TIJD
+
+📌 Opdracht
+
+Vul de ontbrekende cijfers aan:
+👉 HH:MM
+
+
+
+⸻
+
+
+
+🔢 Gegeven
+
+2 _ : 5 _
+
+Extra:
+
+Som van cijfers = 16
+
+
+
+⸻
+
+
+
+💡 Hints
+
+Gebruik alle cijfers
+Check totaal
+
+
+⸻
+
+
+
+✅ Antwoord
+
+→ 21:54
+
+
+
+⸻
+
+
+
+
+
+⸻
+
+
+
+🧩 PUZZEL 3 — DOEL
+
+📌 Opdracht
+
+Vorm een woord uit de letters:
+👉 1 woord
+
+
+
+⸻
+
+
+
+🔢 Gegeven
+
+T E G R A T
+
+Hint:
+
+Wat jij doet met het systeem
+
+
+
+⸻
+
+
+
+✅ Antwoord
+
+→ TARGET
+
+
+
+⸻
+
+
+
+
+
+⸻
+
+
+
+⚖️ FINALE VRAAG
+
+Je merkt dat jouw acties de data veranderen.
+
+Wat doe je nu?
+
+
+
+⸻
+
+
+
+Antwoorden
+
+CONTROL
+OBSERVE
+INFLUENCE
+
+
+⸻
+
+
+
+
+
+⸻
+
+
+
+🎯 WAT JE NU HEBT
+
+Volledige vertakking tot Quest 3
+Duidelijke evolutie per pad
+Geen vage vragen
+Alles oplosbaar zonder gokken
+Verhaal begint zichtbaar te reageren op speler
+
+
+⸻
+
+
+
+Vanaf hier begint het pas leuk te worden, want in Quest 4 kunnen we:
+
+👉 spelers laten twijfelen of ze dingen veroorzaken
+👉 of ORACLE hen gewoon perfect voorspelt
+
+En daar begint de echte mentale schade.
