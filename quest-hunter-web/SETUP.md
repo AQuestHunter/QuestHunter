@@ -66,9 +66,11 @@ Adjust the cron expression as needed. If `cron` is unavailable, rely on the Admi
 
 ## 7. Netlify
 
-1. Connect the repo and set **base directory** to `quest-hunter-web` if the repo root contains other folders.
-2. Build: `npm install && npm run build`; publish: `dist`.
-3. **Site settings → Environment variables**: add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` (same values as local). No `.env` file is required on Netlify if these are set.
+The repository has a root `netlify.toml` (next to `quest-hunter-web/`) that sets `command` to build inside `quest-hunter-web` and `publish` to `quest-hunter-web/dist`. You usually **do not** set a separate “Base directory” in the Netlify UI, and you should **not** set a conflicting custom publish path (e.g. `dist` at repo root) or the site can 404.
+
+1. Connect the GitHub repo and use the default “Build from main” (or your branch).
+2. **Site settings → Build & deploy → Build settings**: if you previously set a custom build command or publish directory, **clear** them so `netlify.toml` is used, or match: command `cd quest-hunter-web && npm ci && npm run build`, publish `quest-hunter-web/dist`.
+3. **Environment variables**: add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` (same as local). Redeploy after changes.
 
 SPA redirects are defined in `netlify.toml`.
 
