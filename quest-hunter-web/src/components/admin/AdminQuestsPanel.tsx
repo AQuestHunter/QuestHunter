@@ -11,6 +11,7 @@ type QuestRow = {
   starts_at: string | null
   ends_at: string | null
   is_published: boolean
+  archived: boolean
 }
 
 type PuzzleDraft = {
@@ -104,10 +105,13 @@ export function AdminQuestsPanel() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [showArchived, setShowArchived] = useState(false)
+  const [sweepBusy, setSweepBusy] = useState(false)
 
   const [slug, setSlug] = useState('')
   const [title, setTitle] = useState('')
   const [isPublished, setIsPublished] = useState(false)
+  const [archivedManual, setArchivedManual] = useState(false)
   const [startsAt, setStartsAt] = useState('')
   const [endsAt, setEndsAt] = useState('')
   const [intro, setIntro] = useState('')
@@ -120,7 +124,7 @@ export function AdminQuestsPanel() {
     setLoading(true)
     const { data, error: err } = await supabase
       .from('quests')
-      .select('id, slug, title, body, starts_at, ends_at, is_published')
+      .select('id, slug, title, body, starts_at, ends_at, is_published, archived')
       .order('starts_at', { ascending: false })
 
     setLoading(false)
@@ -137,11 +141,34 @@ export function AdminQuestsPanel() {
     void loadRows()
   }, [loadRows])
 
+  const visibleRows = useMemo(
+    () => rows.filter((r) => showArchived || !r.archived),
+    [rows, showArchived],
+  )
+
+  async function runArchiveSweep() {
+    setSweepBusy(true)
+    setError(null)
+    const { data, error: err } = await supabase.rpc('run_quest_archive_sweep_admin')
+    setSweepBusy(false)
+    if (err) {
+      setError(err.message)
+      return
+    }
+    const r = data as { ok?: boolean; archived_count?: number; error?: string }
+    if (r && r.ok === false) {
+      setError(r.error ?? 'sweep failed')
+      return
+    }
+    await loadRows()
+  }
+
   function resetForm() {
     setEditingId(null)
     setSlug('')
     setTitle('')
     setIsPublished(false)
+    setArchivedManual(false)
     setStartsAt('')
     setEndsAt('')
     setIntro('')
@@ -156,6 +183,7 @@ export function AdminQuestsPanel() {
     setSlug(row.slug)
     setTitle(row.title)
     setIsPublished(row.is_published)
+    setArchivedManual(row.archived)
     setStartsAt(toLocalInput(row.starts_at))
     setEndsAt(toLocalInput(row.ends_at))
     setIntro(body.intro)
@@ -246,6 +274,7 @@ export function AdminQuestsPanel() {
       starts_at: startsIso,
       ends_at: endsIso,
       is_published: isPublished,
+      ...(editingId ? { archived: archivedManual } : {}),
       updated_at: new Date().toISOString(),
     }
 
@@ -281,13 +310,30 @@ export function AdminQuestsPanel() {
 
   return (
     <div className="admin-quests">
-      <div className="admin-toolbar">
+      <div className="admin-toolbar admin-toolbar-wrap">
         <button type="button" className="ghost-btn mono" onClick={() => resetForm()}>
           New quest
         </button>
         <button type="button" className="ghost-btn mono" onClick={() => void loadRows()} disabled={loading}>
           Refresh
         </button>
+        <button
+          type="button"
+          className="ghost-btn mono"
+          disabled={sweepBusy}
+          onClick={() => void runArchiveSweep()}
+          title="Mark quests archived when ends_at + 1 day has passed"
+        >
+          {sweepBusy ? 'Sweep…' : 'Archive sweep'}
+        </button>
+        <label className="field row-inline toolbar-check mono small">
+          <input
+            type="checkbox"
+            checked={showArchived}
+            onChange={(e) => setShowArchived(e.target.checked)}
+          />
+          Show archived
+        </label>
       </div>
 
       {error ? (
@@ -303,9 +349,11 @@ export function AdminQuestsPanel() {
             <p className="muted mono">loading…</p>
           ) : rows.length === 0 ? (
             <p className="muted small">No quests yet.</p>
+          ) : visibleRows.length === 0 ? (
+            <p className="muted small">No matching quests — enable “Show archived”.</p>
           ) : (
             <ul className="admin-list-ul">
-              {rows.map((r) => (
+              {visibleRows.map((r) => (
                 <li key={r.id}>
                   <button type="button" className="admin-list-btn" onClick={() => editRow(r)}>
                     <span className="mono slug">{r.slug}</span>
@@ -313,6 +361,9 @@ export function AdminQuestsPanel() {
                     <span className={`pill ${r.is_published ? 'on' : 'off'}`}>
                       {r.is_published ? 'live' : 'draft'}
                     </span>
+                    {r.archived ? (
+                      <span className="pill arc">archived</span>
+                    ) : null}
                   </button>
                   <button type="button" className="icon-del mono" title="Delete" onClick={() => void remove(r.id)}>
                     ×
@@ -339,6 +390,17 @@ export function AdminQuestsPanel() {
             <input type="checkbox" checked={isPublished} onChange={(e) => setIsPublished(e.target.checked)} />
             <span className="mono small">Published</span>
           </label>
+
+          {editingId ? (
+            <label className="field row-inline">
+              <input
+                type="checkbox"
+                checked={archivedManual}
+                onChange={(e) => setArchivedManual(e.target.checked)}
+              />
+              <span className="mono small">Archived (manual restore / force archive)</span>
+            </label>
+          ) : null}
 
           <label className="field">
             <span className="mono label-text">Starts at (local)</span>

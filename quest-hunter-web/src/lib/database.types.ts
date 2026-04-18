@@ -42,6 +42,7 @@ export type Database = {
           starts_at: string | null
           ends_at: string | null
           is_published: boolean
+          archived: boolean
           created_at: string
           updated_at: string
         }
@@ -53,6 +54,7 @@ export type Database = {
           starts_at?: string | null
           ends_at?: string | null
           is_published?: boolean
+          archived?: boolean
           created_at?: string
           updated_at?: string
         }
@@ -64,6 +66,7 @@ export type Database = {
           starts_at?: string | null
           ends_at?: string | null
           is_published?: boolean
+          archived?: boolean
           created_at?: string
           updated_at?: string
         }
@@ -160,6 +163,10 @@ export type Database = {
       }
       submit_finale_choice: {
         Args: { p_quest_id: string; p_choice: string }
+        Returns: Json
+      }
+      run_quest_archive_sweep_admin: {
+        Args: Record<string, never>
         Returns: Json
       }
     }

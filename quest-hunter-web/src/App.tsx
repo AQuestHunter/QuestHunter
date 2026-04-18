@@ -5,11 +5,13 @@ import { ProtectedRoute } from './components/ProtectedRoute'
 import { AdminPage } from './pages/AdminPage'
 import { LoginPage } from './pages/LoginPage'
 import { ProfilePage } from './pages/ProfilePage'
+import { EnvCheckPage } from './pages/EnvCheckPage'
 import { QuestsPage } from './pages/QuestsPage'
 
 export default function App() {
   return (
     <Routes>
+      <Route path="/env-check" element={<EnvCheckPage />} />
       <Route path="/login" element={<LoginPage />} />
 
       <Route
