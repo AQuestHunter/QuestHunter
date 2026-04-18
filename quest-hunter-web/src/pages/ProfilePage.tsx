@@ -1,4 +1,6 @@
-import { type FormEvent, useEffect, useState } from 'react'
+import { type FormEvent, useCallback, useEffect, useMemo, useState } from 'react'
+import { getProjectGroupLabel } from '../lib/projectLabels'
+import { errorLooksLikeMissingFinaleHistoryRpc } from '../lib/questSchema'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 
@@ -7,6 +9,17 @@ type BoardRow = {
   xp: number
 }
 
+type FinaleBranchRow = {
+  quest_slug: string
+  quest_title: string
+  branch: string
+  completed_at: string
+  campaign_slug: string
+  campaign_display_name?: string | null
+}
+
+const FINALE_PROJECT_COLLATOR = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' })
+
 export function ProfilePage() {
   const { user, profile, refreshProfile } = useAuth()
   const [hunterName, setHunterName] = useState(profile?.hunter_name ?? '')
@@ -14,6 +27,47 @@ export function ProfilePage() {
   const [error, setError] = useState<string | null>(null)
   const [board, setBoard] = useState<BoardRow[]>([])
   const [boardLoading, setBoardLoading] = useState(true)
+  const [finaleRows, setFinaleRows] = useState<FinaleBranchRow[]>([])
+  const [finaleLoading, setFinaleLoading] = useState(true)
+
+  const finaleByProject = useMemo(() => {
+    const map = new Map<string, FinaleBranchRow[]>()
+    for (const row of finaleRows) {
+      const k = row.campaign_slug?.trim() || 'default'
+      const arr = map.get(k) ?? []
+      arr.push(row)
+      map.set(k, arr)
+    }
+    return [...map.entries()].sort(([a], [b]) => FINALE_PROJECT_COLLATOR.compare(a, b))
+  }, [finaleRows])
+
+  const [finaleProjectOpen, setFinaleProjectOpen] = useState<Record<string, boolean>>({})
+
+  useEffect(() => {
+    setFinaleProjectOpen((prev) => {
+      const next = { ...prev }
+      let changed = false
+      for (const [camp] of finaleByProject) {
+        if (!(camp in next)) {
+          next[camp] = true
+          changed = true
+        }
+      }
+      return changed ? next : prev
+    })
+  }, [finaleByProject])
+
+  const expandFinaleProjects = useCallback(() => {
+    const next: Record<string, boolean> = {}
+    for (const [camp] of finaleByProject) next[camp] = true
+    setFinaleProjectOpen(next)
+  }, [finaleByProject])
+
+  const collapseFinaleProjects = useCallback(() => {
+    const next: Record<string, boolean> = {}
+    for (const [camp] of finaleByProject) next[camp] = false
+    setFinaleProjectOpen(next)
+  }, [finaleByProject])
 
   useEffect(() => {
     setHunterName(profile?.hunter_name ?? '')
@@ -47,6 +101,32 @@ export function ProfilePage() {
     }
   }, [])
 
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadFinaleHistory() {
+      setFinaleLoading(true)
+      const { data, error: err } = await supabase.rpc('get_player_finale_branch_history', {
+        p_limit: 12,
+      })
+      if (cancelled) return
+      if (err) {
+        if (!errorLooksLikeMissingFinaleHistoryRpc(err)) {
+          console.error(err)
+        }
+        setFinaleRows([])
+      } else {
+        setFinaleRows((data ?? []) as FinaleBranchRow[])
+      }
+      setFinaleLoading(false)
+    }
+
+    void loadFinaleHistory()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
   async function saveHunterName(e: FormEvent) {
     e.preventDefault()
     if (!user?.id) return
@@ -55,7 +135,7 @@ export function ProfilePage() {
 
     const name = hunterName.trim()
     if (!name) {
-      setError('Choose a hunter name.')
+      setError('Choose a display name.')
       setSaving(false)
       return
     }
@@ -65,14 +145,26 @@ export function ProfilePage() {
       .update({ hunter_name: name, updated_at: new Date().toISOString() })
       .eq('id', user.id)
 
-    setSaving(false)
     if (err) {
+      setSaving(false)
       if (err.code === '23505') {
-        setError('That hunter name is already taken.')
+        setError('That display name is already taken.')
       } else {
         setError(err.message)
       }
       return
+    }
+
+    const { error: metaErr } = await supabase.auth.updateUser({
+      data: {
+        display_name: name,
+        full_name: name,
+      },
+    })
+
+    setSaving(false)
+    if (metaErr) {
+      console.warn('Auth display name sync:', metaErr.message)
     }
 
     await refreshProfile()
@@ -82,16 +174,27 @@ export function ProfilePage() {
     <section className="panel split">
       <div>
         <h1>Operator</h1>
-        <p className="muted small">Linked account: {user?.email}</p>
+        <p className="muted small">
+          <strong className="display-name-label">Display name:</strong>{' '}
+          {profile?.hunter_name?.trim() ? (
+            <span className="mono accent-strong">{profile.hunter_name}</span>
+          ) : (
+            <span>not set yet</span>
+          )}
+        </p>
+        <p className="muted small">Sign-in email (private): {user?.email}</p>
 
         <form className="stack-form narrow" onSubmit={(e) => void saveHunterName(e)}>
           <label className="field">
-            <span className="mono label-text">Hunter name</span>
+            <span className="mono label-text">Display name</span>
+            <span className="field-hint muted small">
+              Shown in the header, leaderboard, and logs. Must be unique (hunter callsign).
+            </span>
             <input
               className="terminal-input mono"
               value={hunterName}
               onChange={(e) => setHunterName(e.target.value)}
-              placeholder="Unique callsign"
+              placeholder="Your public name"
               minLength={2}
               maxLength={32}
             />
@@ -105,6 +208,78 @@ export function ProfilePage() {
             {saving ? 'Saving…' : 'Save'}
           </button>
         </form>
+
+        <h2 className="mono small muted" style={{ marginTop: '2rem' }}>
+          Finale paths
+        </h2>
+        <p className="muted small">
+          Recent CONTROL / OBSERVE / INFLUENCE choices (per closed dossier). Same data the story engine uses for
+          branching.
+        </p>
+        {finaleLoading ? (
+          <p className="mono muted">loading branches …</p>
+        ) : finaleRows.length === 0 ? (
+          <p className="muted small">No finale choices logged yet.</p>
+        ) : (
+          <div className="finale-project-section">
+            {finaleByProject.length > 1 ? (
+              <div className="finale-project-toolbar">
+                <button type="button" className="ghost-btn mono small" onClick={expandFinaleProjects}>
+                  Expand projects
+                </button>
+                <button type="button" className="ghost-btn mono small" onClick={collapseFinaleProjects}>
+                  Collapse projects
+                </button>
+              </div>
+            ) : null}
+            <div className="finale-project-groups">
+              {finaleByProject.map(([camp, items]) => {
+                const isOpen = finaleProjectOpen[camp] ?? true
+                const { primary, secondary } = getProjectGroupLabel(camp, items)
+                return (
+                  <div key={camp} className="finale-project-group">
+                    <button
+                      type="button"
+                      className="finale-project-toggle mono small"
+                      onClick={() =>
+                        setFinaleProjectOpen((prev) => ({
+                          ...prev,
+                          [camp]: !(prev[camp] ?? true),
+                        }))
+                      }
+                      aria-expanded={isOpen}
+                    >
+                      <span className="admin-project-caret" aria-hidden>
+                        {isOpen ? '▼' : '▶'}
+                      </span>
+                      <span className="admin-project-toggle-text">
+                        <span className="admin-project-line1">
+                          <span className="muted">Project ·</span>{' '}
+                          <span className="accent-strong">{primary}</span>
+                          <span className="muted finale-project-count"> ({items.length})</span>
+                        </span>
+                        {secondary ? (
+                          <span className="admin-project-secondary mono muted">{secondary}</span>
+                        ) : null}
+                      </span>
+                    </button>
+                    {isOpen ? (
+                      <ul className="finale-branch-list mono small finale-branch-list-nested">
+                        {items.map((row, i) => (
+                          <li key={`${row.quest_slug}-${row.completed_at}-${i}`}>
+                            <span className="accent-strong">{row.branch}</span>
+                            <span className="muted"> · </span>
+                            <span>{row.quest_slug}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
       </div>
 
       <div>

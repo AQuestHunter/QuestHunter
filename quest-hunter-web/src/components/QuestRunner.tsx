@@ -6,6 +6,7 @@ import {
   submitFinale,
   submitPuzzleAnswer,
 } from '../lib/questPlay'
+import { mergeQuestUi } from '../lib/questUiDefaults'
 import type { PlayerQuestPayload, QuestSummary } from '../types/quest'
 import { useAuth } from '../contexts/AuthContext'
 
@@ -96,6 +97,8 @@ export function QuestRunner({ summary, onDone }: Props) {
   const completedAt = prog?.completed_at ?? null
   const finaleBranch = prog?.branch ?? null
 
+  const ui = useMemo(() => mergeQuestUi(payload?.ui), [payload?.ui])
+
   const phase = useMemo(() => {
     if (!payload || !prog) return 'loading'
     if (completedAt) return 'done'
@@ -147,24 +150,30 @@ export function QuestRunner({ summary, onDone }: Props) {
 
   if (loadError) {
     return (
-      <article className={`quest-terminal ${shake ? 'shake' : ''}`}>
-        <p className="mono error">
-          {loadError === 'not_available'
-            ? 'This dossier is sealed or outside the active window.'
-            : loadError === 'not_found'
-              ? 'Quest not found.'
-              : loadError === 'auth'
-                ? 'Session lost.'
-                : `Signal lost: ${loadError}`}
-        </p>
+      <article className={`quest-terminal quiz-surface quiz-error ${shake ? 'shake' : ''}`}>
+        <div className="quiz-error-inner">
+          <p className="quiz-error-label mono">Signal interrupted</p>
+          <p className="quiz-error-msg">
+            {loadError === 'not_available'
+              ? 'This dossier is sealed or outside the active window.'
+              : loadError === 'not_found'
+                ? 'Quest not found.'
+                : loadError === 'auth'
+                  ? 'Session lost.'
+                  : `Signal lost: ${loadError}`}
+          </p>
+        </div>
       </article>
     )
   }
 
   if (!payload || !prog || phase === 'loading') {
     return (
-      <article className="quest-terminal">
-        <p className="mono muted">decrypting dossier …</p>
+      <article className="quest-terminal quiz-surface quiz-loading-card" aria-busy="true">
+        <div className="quiz-loading">
+          <div className="quiz-loading-orbit" aria-hidden />
+          <p className="mono muted quiz-loading-text">{ui.loadingMessage}</p>
+        </div>
       </article>
     )
   }
@@ -175,32 +184,40 @@ export function QuestRunner({ summary, onDone }: Props) {
     phase !== 'done'
   ) {
     return (
-      <article className="quest-intro-panel">
-        <p className="narrative">{payload.intro}</p>
-        <button
-          type="button"
-          className="primary-btn mono"
-          onClick={() => {
-            sessionStorage.setItem(`qh-intro-${summary.id}`, '1')
-            setIntroAck(true)
-          }}
-        >
-          Open channel →
-        </button>
+      <article className="quest-intro-panel quiz-intro">
+        <div className="quiz-intro-glow" aria-hidden />
+        <div className="quiz-intro-inner">
+          <p className="quiz-intro-kicker mono">{ui.introKicker}</p>
+          <p className="narrative quiz-narrative">{payload.intro}</p>
+          <button
+            type="button"
+            className="primary-btn mono quiz-intro-cta"
+            onClick={() => {
+              sessionStorage.setItem(`qh-intro-${summary.id}`, '1')
+              setIntroAck(true)
+            }}
+          >
+            {ui.introCta}
+          </button>
+        </div>
       </article>
     )
   }
 
   if (phase === 'done') {
     return (
-      <article className="quest-terminal complete">
-        <p className="mono small muted">CLOSED /// {summary.slug}</p>
-        <h2>Dossier archived</h2>
-        <p className="muted">
-          Path logged:{' '}
-          <span className="mono accent-strong">{finaleBranch ?? '—'}</span>. XP applied to your
-          operator record.
+      <article className="quest-terminal quiz-surface quiz-complete complete">
+        <div className="quiz-complete-badge" aria-hidden>
+          <span className="quiz-complete-check">✓</span>
+        </div>
+        <p className="mono quiz-complete-slug">
+          {ui.completeSlugPrefix} {summary.slug}
         </p>
+        <h2 className="quiz-complete-title">{ui.completeTitle}</h2>
+        <p className="muted quiz-complete-lede">
+          {ui.completeLede.replace(/\{branch\}/g, finaleBranch ?? '—')}
+        </p>
+        <p className="muted small quiz-complete-note">{ui.completeNote}</p>
       </article>
     )
   }
@@ -208,25 +225,31 @@ export function QuestRunner({ summary, onDone }: Props) {
   if (phase === 'puzzle' && currentPuzzle) {
     const isChoice = currentPuzzle.inputType === 'choice' && (currentPuzzle.choices?.length ?? 0) > 0
 
+    const progressPct = puzzles.length > 0 ? ((step + 1) / puzzles.length) * 100 : 0
+
     return (
-      <article className={`quest-terminal ${shake ? 'shake glitch-border' : ''}`}>
-        <header className="terminal-head mono">
-          <span>PUZZLE</span>
-          <span>
-            {step + 1}/{puzzles.length}
+      <article className={`quest-terminal quiz-surface ${shake ? 'shake glitch-border' : ''}`}>
+        <div className="quiz-progress-track" aria-hidden>
+          <div className="quiz-progress-fill" style={{ width: `${progressPct}%` }} />
+        </div>
+        <header className="quiz-head mono">
+          <span className="quiz-head-badge">{ui.challengeBadge}</span>
+          <span className="quiz-head-step">
+            {step + 1} / {puzzles.length}
           </span>
         </header>
-        <div className="terminal-body">
-          <p className="prompt mono">{currentPuzzle.prompt}</p>
+        <div className="quiz-body">
+          <p className="quiz-prompt">{currentPuzzle.prompt}</p>
           {currentPuzzle.hint ? (
-            <p className="hint mono">
-              <span className="muted">hint ►</span> {currentPuzzle.hint}
-            </p>
+            <aside className="quiz-hint">
+              <span className="quiz-hint-label mono">{ui.hintLabel}</span>
+              <p className="quiz-hint-text mono">{currentPuzzle.hint}</p>
+            </aside>
           ) : null}
 
           {isChoice ? (
             <div className="choice-grid">
-              {currentPuzzle.choices!.map((c) => (
+              {currentPuzzle.choices!.map((c, i) => (
                 <button
                   key={c}
                   type="button"
@@ -248,27 +271,32 @@ export function QuestRunner({ summary, onDone }: Props) {
                     })()
                   }}
                 >
-                  {c}
+                  <span className="choice-index mono" aria-hidden>
+                    {(i + 1).toString().padStart(2, '0')}
+                  </span>
+                  <span className="choice-label">{c}</span>
                 </button>
               ))}
             </div>
           ) : (
-            <form className="puzzle-form" onSubmit={(e) => void onSubmitPuzzle(e)}>
+            <form className="puzzle-form quiz-answer-form" onSubmit={(e) => void onSubmitPuzzle(e)}>
               <label className="mono sr-only" htmlFor={`ans-${currentPuzzle.id}`}>
-                Answer
+                {ui.answerPlaceholder}
               </label>
-              <input
-                id={`ans-${currentPuzzle.id}`}
-                className="terminal-input mono wide"
-                value={attempt}
-                onChange={(e) => setAttempt(e.target.value)}
-                placeholder="████"
-                autoComplete="off"
-                spellCheck={false}
-              />
-              <button type="submit" className="primary-btn mono" disabled={busy}>
-                {busy ? '…' : 'Transmit'}
-              </button>
+              <div className="quiz-input-row">
+                <input
+                  id={`ans-${currentPuzzle.id}`}
+                  className="terminal-input mono wide quiz-answer-input"
+                  value={attempt}
+                  onChange={(e) => setAttempt(e.target.value)}
+                  placeholder={ui.answerPlaceholder}
+                  autoComplete="off"
+                  spellCheck={false}
+                />
+                <button type="submit" className="primary-btn mono quiz-submit-btn" disabled={busy}>
+                  {busy ? ui.submitBusyLabel : ui.submitLabel}
+                </button>
+              </div>
             </form>
           )}
         </div>
@@ -277,32 +305,48 @@ export function QuestRunner({ summary, onDone }: Props) {
   }
 
   return (
-    <article className={`quest-terminal finale ${shake ? 'shake' : ''}`}>
-      <header className="terminal-head mono">
-        <span>FINALE</span>
-        <span>branch</span>
+    <article className={`quest-terminal quiz-surface quiz-finale-shell finale ${shake ? 'shake' : ''}`}>
+      <header className="quiz-head mono quiz-head-finale">
+        <span className="quiz-head-badge quiz-head-badge-finale">{ui.finaleBadge}</span>
+        <span className="quiz-head-step">{ui.finaleHeadline}</span>
       </header>
-      <div className="terminal-body">
-        <p className="prompt">{payload.finalePrompt}</p>
+      <div className="quiz-body">
+        <p className="quiz-prompt quiz-finale-prompt">{payload.finalePrompt}</p>
         {finaleError ? (
-          <p className="mono error small" role="alert">
+          <p className="mono error small quiz-finale-error" role="alert">
             {finaleError}
           </p>
         ) : null}
         <div className="branch-grid">
-          <button type="button" className="branch-btn mono" disabled={busy} onClick={() => void pickFinale('CONTROL')}>
-            CONTROL
-          </button>
-          <button type="button" className="branch-btn mono" disabled={busy} onClick={() => void pickFinale('OBSERVE')}>
-            OBSERVE
+          <button
+            type="button"
+            className="branch-card branch-card--control"
+            disabled={busy}
+            onClick={() => void pickFinale('CONTROL')}
+          >
+            <span className="branch-card-kicker mono">{ui.branches.CONTROL.kicker}</span>
+            <span className="branch-card-title mono">{ui.branches.CONTROL.title}</span>
+            <span className="branch-card-desc">{ui.branches.CONTROL.description}</span>
           </button>
           <button
             type="button"
-            className="branch-btn mono"
+            className="branch-card branch-card--observe"
+            disabled={busy}
+            onClick={() => void pickFinale('OBSERVE')}
+          >
+            <span className="branch-card-kicker mono">{ui.branches.OBSERVE.kicker}</span>
+            <span className="branch-card-title mono">{ui.branches.OBSERVE.title}</span>
+            <span className="branch-card-desc">{ui.branches.OBSERVE.description}</span>
+          </button>
+          <button
+            type="button"
+            className="branch-card branch-card--influence"
             disabled={busy}
             onClick={() => void pickFinale('INFLUENCE')}
           >
-            INFLUENCE
+            <span className="branch-card-kicker mono">{ui.branches.INFLUENCE.kicker}</span>
+            <span className="branch-card-title mono">{ui.branches.INFLUENCE.title}</span>
+            <span className="branch-card-desc">{ui.branches.INFLUENCE.description}</span>
           </button>
         </div>
       </div>

@@ -43,6 +43,12 @@ export type Database = {
           ends_at: string | null
           is_published: boolean
           archived: boolean
+          campaign_slug: string
+          campaign_display_name: string | null
+          sequence_idx: number
+          next_control_id: string | null
+          next_observe_id: string | null
+          next_influence_id: string | null
           created_at: string
           updated_at: string
         }
@@ -55,6 +61,12 @@ export type Database = {
           ends_at?: string | null
           is_published?: boolean
           archived?: boolean
+          campaign_slug?: string
+          campaign_display_name?: string | null
+          sequence_idx?: number
+          next_control_id?: string | null
+          next_observe_id?: string | null
+          next_influence_id?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -67,6 +79,12 @@ export type Database = {
           ends_at?: string | null
           is_published?: boolean
           archived?: boolean
+          campaign_slug?: string
+          campaign_display_name?: string | null
+          sequence_idx?: number
+          next_control_id?: string | null
+          next_observe_id?: string | null
+          next_influence_id?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -168,6 +186,28 @@ export type Database = {
       run_quest_archive_sweep_admin: {
         Args: Record<string, never>
         Returns: Json
+      }
+      get_player_resolved_quest_summary: {
+        Args: { p_campaign?: string }
+        Returns: {
+          id: string | null
+          slug: string | null
+          title: string | null
+          starts_at: string | null
+          ends_at: string | null
+          resolve_status: string
+        }[]
+      }
+      get_player_finale_branch_history: {
+        Args: { p_limit?: number }
+        Returns: {
+          quest_slug: string
+          quest_title: string
+          branch: string
+          completed_at: string
+          campaign_slug: string
+          campaign_display_name: string | null
+        }[]
       }
     }
     Enums: Record<string, never>

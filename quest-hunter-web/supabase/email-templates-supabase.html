@@ -1,0 +1,242 @@
+<!--
+  Quest Hunter — Supabase Auth e-mailtemplates (Nederlands)
+  Kleuren uit src/index.css: achtergrond #0a0b0f, surface #12141c, accent #3dff7a, paars rand-login.
+
+  Plakken in: Supabase Dashboard → Authentication → Email Templates
+  Per template: Subject = onderaan in comment, Body = het <body>-gedeelte of het hele HTML-document
+  (Supabase verwacht meestal alleen de inner HTML; als dat zo is, gebruik vanaf <table role="presentation">…)
+
+  Variabelen: https://supabase.com/docs/guides/auth/auth-email-templates
+-->
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     TEMPLATE 1 — Confirm sign up
+     Subject: Bevestig je e-mailadres — Quest Hunter
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bevestig je e-mail</title>
+</head>
+<body style="margin:0;padding:0;background-color:#0a0b0f;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#0a0b0f;">
+    <tr>
+      <td align="center" style="padding:28px 16px;">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:560px;background:linear-gradient(165deg,#161626 0%,#0b0d14 100%);background-color:#12141c;border:1px solid rgba(134,59,255,0.35);border-radius:16px;overflow:hidden;">
+          <tr>
+            <td style="padding:28px 28px 8px;">
+              <p style="margin:0 0 16px;font-family:Consolas,'IBM Plex Mono','Courier New',monospace;font-size:11px;letter-spacing:0.35em;text-transform:uppercase;color:#3dff7a;">HET GEBROKEN SIGNAAL</p>
+              <p style="margin:0 0 6px;font-family:Consolas,'IBM Plex Mono',monospace;font-size:13px;letter-spacing:0.12em;color:#3dff7a;">QUEST HUNTER</p>
+              <h1 style="margin:0;font-family:system-ui,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:20px;font-weight:600;letter-spacing:-0.02em;color:#e8e9ed;line-height:1.25;">Welkom — bevestig je account</h1>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:8px 28px 24px;font-family:system-ui,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.55;color:#8b90a1;">
+              <p style="margin:0 0 16px;">Activeer je account door je e-mailadres te bevestigen. Daarna kun je je voortgang synchroniseren.</p>
+              <p style="margin:0 0 20px;font-family:Consolas,'IBM Plex Mono',monospace;font-size:13px;color:#e8e9ed;"><strong style="color:#e8e9ed;">{{ .Email }}</strong></p>
+              <p style="margin:0 0 28px;">
+                <a href="{{ .ConfirmationURL }}" style="display:inline-block;background-color:rgba(61,255,122,0.15);border:1px solid #3dff7a;color:#3dff7a;text-decoration:none;padding:12px 22px;border-radius:10px;font-family:Consolas,'IBM Plex Mono',monospace;font-size:13px;font-weight:600;letter-spacing:0.04em;">E-mail bevestigen</a>
+              </p>
+              <p style="margin:0 0 8px;font-family:Consolas,'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.06em;color:#8b90a1;">Eenmalige code</p>
+              <p style="margin:0;font-family:Consolas,'IBM Plex Mono',monospace;font-size:22px;font-weight:700;letter-spacing:8px;color:#3dff7a;">{{ .Token }}</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:0 28px 28px;font-family:system-ui,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:12px;line-height:1.5;color:#6b7080;">
+              <p style="margin:0;">Heb jij dit niet aangevraagd? Dan kun je deze e-mail negeren.</p>
+            </td>
+          </tr>
+        </table>
+        <p style="margin:16px 0 0;font-family:Consolas,'IBM Plex Mono',monospace;font-size:11px;color:#6b7080;">{{ .SiteURL }}</p>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     TEMPLATE 2 — Invite user
+     Subject: Je bent uitgenodigd — Quest Hunter
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Uitnodiging</title>
+</head>
+<body style="margin:0;padding:0;background-color:#0a0b0f;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#0a0b0f;">
+    <tr>
+      <td align="center" style="padding:28px 16px;">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:560px;background:linear-gradient(165deg,#161626 0%,#0b0d14 100%);background-color:#12141c;border:1px solid rgba(134,59,255,0.35);border-radius:16px;overflow:hidden;">
+          <tr>
+            <td style="padding:28px 28px 8px;">
+              <p style="margin:0 0 16px;font-family:Consolas,'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.35em;text-transform:uppercase;color:#3dff7a;">HET GEBROKEN SIGNAAL</p>
+              <p style="margin:0 0 6px;font-family:Consolas,'IBM Plex Mono',monospace;font-size:13px;letter-spacing:0.12em;color:#3dff7a;">QUEST HUNTER</p>
+              <h1 style="margin:0;font-family:system-ui,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:20px;font-weight:600;letter-spacing:-0.02em;color:#e8e9ed;line-height:1.25;">Je bent uitgenodigd</h1>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:8px 28px 24px;font-family:system-ui,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.55;color:#8b90a1;">
+              <p style="margin:0 0 16px;">Er is een account voor je aangemaakt op <span style="color:#e8e9ed;">Quest Hunter</span>. Volg de link om je registratie te voltooien.</p>
+              <p style="margin:0 0 20px;font-family:Consolas,'IBM Plex Mono',monospace;font-size:13px;color:#e8e9ed;"><strong>{{ .Email }}</strong></p>
+              <p style="margin:0 0 28px;">
+                <a href="{{ .ConfirmationURL }}" style="display:inline-block;background-color:rgba(61,255,122,0.15);border:1px solid #3dff7a;color:#3dff7a;text-decoration:none;padding:12px 22px;border-radius:10px;font-family:Consolas,'IBM Plex Mono',monospace;font-size:13px;font-weight:600;letter-spacing:0.04em;">Uitnodiging accepteren</a>
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:0 28px 28px;font-family:system-ui,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:12px;line-height:1.5;color:#6b7080;">
+              <p style="margin:0;">Geen uitnodiging verwacht? Negeer deze e-mail.</p>
+            </td>
+          </tr>
+        </table>
+        <p style="margin:16px 0 0;font-family:Consolas,'IBM Plex Mono',monospace;font-size:11px;color:#6b7080;">{{ .SiteURL }}</p>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     TEMPLATE 3 — Magic link
+     Subject: Je inloglink — Quest Hunter
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Magic link</title>
+</head>
+<body style="margin:0;padding:0;background-color:#0a0b0f;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#0a0b0f;">
+    <tr>
+      <td align="center" style="padding:28px 16px;">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:560px;background:linear-gradient(165deg,#161626 0%,#0b0d14 100%);background-color:#12141c;border:1px solid rgba(134,59,255,0.35);border-radius:16px;overflow:hidden;">
+          <tr>
+            <td style="padding:28px 28px 8px;">
+              <p style="margin:0 0 16px;font-family:Consolas,'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.35em;text-transform:uppercase;color:#3dff7a;">HET GEBROKEN SIGNAAL</p>
+              <p style="margin:0 0 6px;font-family:Consolas,'IBM Plex Mono',monospace;font-size:13px;letter-spacing:0.12em;color:#3dff7a;">QUEST HUNTER</p>
+              <h1 style="margin:0;font-family:system-ui,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:20px;font-weight:600;letter-spacing:-0.02em;color:#e8e9ed;line-height:1.25;">Inloggen met een eenmalige link</h1>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:8px 28px 24px;font-family:system-ui,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.55;color:#8b90a1;">
+              <p style="margin:0 0 16px;">Klik op de knop om in te loggen. De link is maar kort geldig.</p>
+              <p style="margin:0 0 28px;">
+                <a href="{{ .ConfirmationURL }}" style="display:inline-block;background-color:rgba(61,255,122,0.15);border:1px solid #3dff7a;color:#3dff7a;text-decoration:none;padding:12px 22px;border-radius:10px;font-family:Consolas,'IBM Plex Mono',monospace;font-size:13px;font-weight:600;letter-spacing:0.04em;">Enter channel</a>
+              </p>
+              <p style="margin:0 0 8px;font-family:Consolas,'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.06em;color:#8b90a1;">Code</p>
+              <p style="margin:0;font-family:Consolas,'IBM Plex Mono',monospace;font-size:22px;font-weight:700;letter-spacing:8px;color:#3dff7a;">{{ .Token }}</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:0 28px 28px;font-family:system-ui,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:12px;line-height:1.5;color:#6b7080;">
+              <p style="margin:0;">Niet jij? Negeer deze e-mail; je account blijft veilig.</p>
+            </td>
+          </tr>
+        </table>
+        <p style="margin:16px 0 0;font-family:Consolas,'IBM Plex Mono',monospace;font-size:11px;color:#6b7080;">{{ .SiteURL }}</p>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     TEMPLATE 4 — Change email address
+     Subject: Bevestig je nieuwe e-mailadres — Quest Hunter
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>E-mail wijzigen</title>
+</head>
+<body style="margin:0;padding:0;background-color:#0a0b0f;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#0a0b0f;">
+    <tr>
+      <td align="center" style="padding:28px 16px;">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:560px;background:linear-gradient(165deg,#161626 0%,#0b0d14 100%);background-color:#12141c;border:1px solid rgba(134,59,255,0.35);border-radius:16px;overflow:hidden;">
+          <tr>
+            <td style="padding:28px 28px 8px;">
+              <p style="margin:0 0 16px;font-family:Consolas,'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.35em;text-transform:uppercase;color:#3dff7a;">HET GEBROKEN SIGNAAL</p>
+              <p style="margin:0 0 6px;font-family:Consolas,'IBM Plex Mono',monospace;font-size:13px;letter-spacing:0.12em;color:#3dff7a;">QUEST HUNTER</p>
+              <h1 style="margin:0;font-family:system-ui,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:20px;font-weight:600;letter-spacing:-0.02em;color:#e8e9ed;line-height:1.25;">Bevestig je nieuwe e-mail</h1>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:8px 28px 24px;font-family:system-ui,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.55;color:#8b90a1;">
+              <p style="margin:0 0 16px;">Je hebt gevraagd om dit adres te koppelen aan je account:</p>
+              <p style="margin:0 0 20px;font-family:Consolas,'IBM Plex Mono',monospace;font-size:13px;color:#3dff7a;"><strong>{{ .NewEmail }}</strong></p>
+              <p style="margin:0 0 24px;">Klik op de knop om de wijziging te bevestigen.</p>
+              <p style="margin:0 0 28px;">
+                <a href="{{ .ConfirmationURL }}" style="display:inline-block;background-color:rgba(61,255,122,0.15);border:1px solid #3dff7a;color:#3dff7a;text-decoration:none;padding:12px 22px;border-radius:10px;font-family:Consolas,'IBM Plex Mono',monospace;font-size:13px;font-weight:600;letter-spacing:0.04em;">Nieuwe e-mail bevestigen</a>
+              </p>
+              <p style="margin:0;font-family:Consolas,'IBM Plex Mono',monospace;font-size:12px;color:#8b90a1;">Huidig adres: <span style="color:#e8e9ed;">{{ .Email }}</span></p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:0 28px 28px;font-family:system-ui,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:12px;line-height:1.5;color:#6b7080;">
+              <p style="margin:0;">Was dit niet jouw verzoek? Laat het ons weten en wijzig je wachtwoord als je twijfelt.</p>
+            </td>
+          </tr>
+        </table>
+        <p style="margin:16px 0 0;font-family:Consolas,'IBM Plex Mono',monospace;font-size:11px;color:#6b7080;">{{ .SiteURL }}</p>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     TEMPLATE 5 — Reset password
+     Subject: Wachtwoord resetten — Quest Hunter
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Wachtwoord resetten</title>
+</head>
+<body style="margin:0;padding:0;background-color:#0a0b0f;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#0a0b0f;">
+    <tr>
+      <td align="center" style="padding:28px 16px;">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:560px;background:linear-gradient(165deg,#161626 0%,#0b0d14 100%);background-color:#12141c;border:1px solid rgba(134,59,255,0.35);border-radius:16px;overflow:hidden;">
+          <tr>
+            <td style="padding:28px 28px 8px;">
+              <p style="margin:0 0 16px;font-family:Consolas,'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.35em;text-transform:uppercase;color:#3dff7a;">HET GEBROKEN SIGNAAL</p>
+              <p style="margin:0 0 6px;font-family:Consolas,'IBM Plex Mono',monospace;font-size:13px;letter-spacing:0.12em;color:#3dff7a;">QUEST HUNTER</p>
+              <h1 style="margin:0;font-family:system-ui,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:20px;font-weight:600;letter-spacing:-0.02em;color:#e8e9ed;line-height:1.25;">Wachtwoord opnieuw instellen</h1>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:8px 28px 24px;font-family:system-ui,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.55;color:#8b90a1;">
+              <p style="margin:0 0 16px;">Er is een verzoek ingediend om het wachtwoord te resetten voor:</p>
+              <p style="margin:0 0 24px;font-family:Consolas,'IBM Plex Mono',monospace;font-size:13px;color:#e8e9ed;"><strong>{{ .Email }}</strong></p>
+              <p style="margin:0 0 28px;">
+                <a href="{{ .ConfirmationURL }}" style="display:inline-block;background-color:rgba(61,255,122,0.15);border:1px solid #3dff7a;color:#3dff7a;text-decoration:none;padding:12px 22px;border-radius:10px;font-family:Consolas,'IBM Plex Mono',monospace;font-size:13px;font-weight:600;letter-spacing:0.04em;">Nieuw wachtwoord instellen</a>
+              </p>
+              <p style="margin:0 0 8px;font-family:Consolas,'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.06em;color:#8b90a1;">Code</p>
+              <p style="margin:0;font-family:Consolas,'IBM Plex Mono',monospace;font-size:22px;font-weight:700;letter-spacing:8px;color:#3dff7a;">{{ .Token }}</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:0 28px 28px;font-family:system-ui,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:12px;line-height:1.5;color:#6b7080;">
+              <p style="margin:0;">Heb jij dit niet gevraagd? Negeer deze mail — je wachtwoord blijft ongewijzigd.</p>
+            </td>
+          </tr>
+        </table>
+        <p style="margin:16px 0 0;font-family:Consolas,'IBM Plex Mono',monospace;font-size:11px;color:#6b7080;">{{ .SiteURL }}</p>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

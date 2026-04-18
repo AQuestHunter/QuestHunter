@@ -119,26 +119,28 @@ export function AdminAnalyticsPanel() {
             {attemptStats.length === 0 ? (
               <p className="muted small">No attempts yet.</p>
             ) : (
-              <table className="data-table mono">
-                <thead>
-                  <tr>
-                    <th>Quest</th>
-                    <th>Wrong</th>
-                    <th>Total</th>
-                    <th>Wrong %</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {attemptStats.map((r) => (
-                    <tr key={r.questId}>
-                      <td>{r.title}</td>
-                      <td>{r.wrong}</td>
-                      <td>{r.total}</td>
-                      <td>{r.rate}%</td>
+              <div className="table-scroll">
+                <table className="data-table mono">
+                  <thead>
+                    <tr>
+                      <th>Quest</th>
+                      <th>Wrong</th>
+                      <th>Total</th>
+                      <th>Wrong %</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {attemptStats.map((r) => (
+                      <tr key={r.questId}>
+                        <td>{r.title}</td>
+                        <td>{r.wrong}</td>
+                        <td>{r.total}</td>
+                        <td>{r.rate}%</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </section>
 
@@ -148,24 +150,26 @@ export function AdminAnalyticsPanel() {
             {durationStats.length === 0 ? (
               <p className="muted small">No completions with timestamps yet.</p>
             ) : (
-              <table className="data-table mono">
-                <thead>
-                  <tr>
-                    <th>Quest</th>
-                    <th>Avg seconds</th>
-                    <th>Runs</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {durationStats.map((r) => (
-                    <tr key={r.questId}>
-                      <td>{r.title}</td>
-                      <td>{r.avgSeconds}s</td>
-                      <td>{r.completions}</td>
+              <div className="table-scroll">
+                <table className="data-table mono">
+                  <thead>
+                    <tr>
+                      <th>Quest</th>
+                      <th>Avg seconds</th>
+                      <th>Runs</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {durationStats.map((r) => (
+                      <tr key={r.questId}>
+                        <td>{r.title}</td>
+                        <td>{r.avgSeconds}s</td>
+                        <td>{r.completions}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </section>
         </div>

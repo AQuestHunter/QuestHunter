@@ -1,5 +1,20 @@
 import { supabase } from './supabase'
-import type { PlayerQuestPayload, QuestSummary } from '../types/quest'
+import { errorLooksLikeMissingCampaignRpc } from './questSchema'
+import type { PlayerQuestPayload, QuestSummary, ResolvedQuestStatus } from '../types/quest'
+
+function pickLatestSummaries(rows: QuestSummary[]): QuestSummary | null {
+  if (rows.length === 0) return null
+  return [...rows].sort(
+    (a, b) => new Date(b.starts_at ?? 0).getTime() - new Date(a.starts_at ?? 0).getTime(),
+  )[0]
+}
+
+/** Defaults to `"default"` (legacy: newest playable quest globally). Non-default enables branch-aware resolution. */
+export function getPlayerCampaignSlugFromEnv(): string {
+  const raw = import.meta.env.VITE_QUEST_CAMPAIGN_SLUG
+  if (raw == null || String(raw).trim() === '') return 'default'
+  return String(raw).trim()
+}
 
 export async function fetchActiveQuestSummaries(): Promise<{
   data: QuestSummary[] | null
@@ -8,6 +23,59 @@ export async function fetchActiveQuestSummaries(): Promise<{
   const { data, error } = await supabase.rpc('list_active_quest_summaries')
   if (error) return { data: null, error: error.message }
   return { data: (data ?? []) as QuestSummary[], error: null }
+}
+
+/** Campaign slug: `default` keeps legacy pickLatest (newest playable quest). Set e.g. `project-oracle` for branch resolution. */
+export async function fetchResolvedQuestSummary(campaignSlug: string): Promise<{
+  summary: QuestSummary | null
+  resolveStatus: ResolvedQuestStatus
+  error: string | null
+}> {
+  const slug = campaignSlug.trim() || 'default'
+  const { data, error } = await supabase.rpc('get_player_resolved_quest_summary', {
+    p_campaign: slug,
+  })
+  if (error) {
+    if (errorLooksLikeMissingCampaignRpc(error)) {
+      const fb = await fetchActiveQuestSummaries()
+      if (fb.error) return { summary: null, resolveStatus: 'none', error: fb.error }
+      const latest = pickLatestSummaries(fb.data ?? [])
+      return {
+        summary: latest,
+        resolveStatus: latest ? 'active' : 'none',
+        error: null,
+      }
+    }
+    return { summary: null, resolveStatus: 'none', error: error.message }
+  }
+
+  const row = Array.isArray(data) ? data[0] : null
+  if (!row || typeof row !== 'object') {
+    return { summary: null, resolveStatus: 'none', error: null }
+  }
+
+  const r = row as {
+    id: string | null
+    slug: string | null
+    title: string | null
+    starts_at: string | null
+    ends_at: string | null
+    resolve_status: string | null
+  }
+
+  const resolveStatus = (r.resolve_status ?? 'none') as ResolvedQuestStatus
+  if (!r.id || !r.slug || !r.title) {
+    return { summary: null, resolveStatus, error: null }
+  }
+
+  const summary: QuestSummary = {
+    id: r.id,
+    slug: r.slug,
+    title: r.title,
+    starts_at: r.starts_at,
+    ends_at: r.ends_at,
+  }
+  return { summary, resolveStatus, error: null }
 }
 
 export async function fetchPlayerQuestPayload(questId: string): Promise<{

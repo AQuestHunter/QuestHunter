@@ -13,6 +13,7 @@ In `quest-hunter-web/`:
 
 1. Copy `.env.example` to `.env`.
 2. Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`.
+3. Optional — branching campaigns: set **`VITE_QUEST_CAMPAIGN_SLUG`** (e.g. `project-oracle`) so the Quests page resolves the **next dossier** from finale paths instead of only picking the newest published quest. Omit or leave empty for legacy behaviour (**default** = global latest playable quest).
 
 Optional check:
 
@@ -27,8 +28,9 @@ In **Supabase → SQL Editor**, run these files **in order** (full contents, eac
 1. `supabase/migrations/20260418120000_initial.sql`
 2. `supabase/migrations/20260418200000_quest_rpc_and_security.sql`
 3. `supabase/migrations/20260419000000_quest_archive_retention.sql`
+4. `supabase/migrations/20260420000000_campaign_branching.sql`
 
-The third adds **`quests.archived`**, tightens RPCs, and **`run_quest_archive_sweep_admin`** for the Admin “Archive sweep” button.
+The third adds **`quests.archived`**, tightens RPCs, and **`run_quest_archive_sweep_admin`** for the Admin “Archive sweep” button. The fourth adds **`campaign_slug`**, **`sequence_idx`**, branch **next-quest** pointers, **`get_player_resolved_quest_summary`**, and **`get_player_finale_branch_history`**.
 
 ## 4. Auth
 
@@ -73,6 +75,27 @@ The repository has a root `netlify.toml` (next to `quest-hunter-web/`) that sets
 3. **Environment variables**: add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` (same as local). Redeploy after changes.
 
 SPA redirects are defined in `netlify.toml`.
+
+## Draft story content (PROJECT ORACLE)
+
+Run these SQL snippets **in order** in the SQL Editor (each uses `ON CONFLICT (slug)` upsert):
+
+1. `supabase/snippets/draft_project_oracle_quests.sql` — Quest **1** + **3A/B/C** (hoofdstuk-teaser + jouw uitgewerkte Quest 3).
+2. `supabase/snippets/draft_project_oracle_story_arc.sql` — Quest **2, 4, 6, 8** (×3 paden), **9** (lineair), **10** (finale).
+3. `supabase/snippets/draft_project_oracle_q5_q7.sql` — Quest **5** en **7** (×3 paden).
+
+Alle rijen hebben `is_published = false`. Zet in **Admin → Quests** **starts_at / ends** en **Published** wanneer je live gaat.
+
+**Bedoelde volgorde verhaal** (per speler-pad moet je het juiste quest-bestand publiceren):  
+`01` → `02[a|b|c]` → `03[a|b|c]` → `04…` → `05…` → `06…` → `07…` → `08…` → `09` → `10`.  
+Vertakking zit in de **finale-keuze** (CONTROL / OBSERVE / INFLUENCE); welk `oracle-0Xy-*` je publiceert koppel je handmatig aan je campagne.
+
+Na import: zet in **Admin → Quests** per rij **Campaign slug** (`project-oracle`), **Sequence**, en **Next quest after CONTROL/OBSERVE/INFLUENCE** zodat spelers automatisch het juiste hoofdstuk zien (plus `VITE_QUEST_CAMPAIGN_SLUG` in `.env` / Netlify).
+
+**Content QA (playtest):** at least one full run per draft quest — exact answer strings, all **English** in-quest copy (snippets), then finale → next dossier as wired in Admin.
+
+**Slugs** (prefix `oracle-`):  
+`01-lek`, `02a/b/c-*`, `03a/b/c-*`, `04a/b/c-*`, `05a/b/c-*`, `06a/b/c-*`, `07a/b/c-*`, `08a/b/c-*`, `09-lab`, `10-finale`.
 
 ## 8. Verify Netlify env (after deploy)
 

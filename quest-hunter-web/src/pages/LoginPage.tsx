@@ -38,15 +38,24 @@ export function LoginPage() {
   return (
     <div className="shell login-shell">
       <div className="login-card">
-        <p className="hero-tag mono flicker">HET GEBROKEN SIGNAAL</p>
-        <h1 className="login-title">Access</h1>
-        <p className="muted small">
-          Authenticate to sync progress. No signal leaves this channel unlogged.
-        </p>
+        <header className="login-brand">
+          <div className="login-logo-ring" aria-hidden>
+            <img className="login-logo" src="/favicon.svg" alt="" width={52} height={50} decoding="async" />
+          </div>
+          <p className="hero-tag mono flicker login-eyebrow">HET GEBROKEN SIGNAAL</p>
+          <h1 className="login-title">
+            <span className="login-title-brand">Quest Hunter</span>
+          </h1>
+          <p className="muted small login-lede">
+            Authenticate to sync progress. Every channel is logged; nothing broadcasts raw.
+          </p>
+        </header>
 
-        <div className="tab-row mono">
+        <div className="login-tab-seg mono" role="tablist" aria-label="Account mode">
           <button
             type="button"
+            role="tab"
+            aria-selected={mode === 'signin'}
             className={mode === 'signin' ? 'tab active' : 'tab'}
             onClick={() => setMode('signin')}
           >
@@ -54,6 +63,8 @@ export function LoginPage() {
           </button>
           <button
             type="button"
+            role="tab"
+            aria-selected={mode === 'signup'}
             className={mode === 'signup' ? 'tab active' : 'tab'}
             onClick={() => setMode('signup')}
           >
@@ -61,11 +72,11 @@ export function LoginPage() {
           </button>
         </div>
 
-        <form className="stack-form" onSubmit={(e) => void onSubmit(e)}>
+        <form className="stack-form login-form" onSubmit={(e) => void onSubmit(e)}>
           <label className="field">
             <span className="mono label-text">Email</span>
             <input
-              className="terminal-input mono"
+              className="terminal-input mono login-input"
               type="email"
               autoComplete="email"
               value={email}
@@ -76,7 +87,7 @@ export function LoginPage() {
           <label className="field">
             <span className="mono label-text">Password</span>
             <input
-              className="terminal-input mono"
+              className="terminal-input mono login-input"
               type="password"
               autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
               value={password}
@@ -86,12 +97,12 @@ export function LoginPage() {
             />
           </label>
           {error ? (
-            <p className="error mono small" role="alert">
+            <p className="error mono small login-error" role="alert">
               {error}
             </p>
           ) : null}
-          <button type="submit" className="primary-btn mono" disabled={pending}>
-            {pending ? '…' : mode === 'signin' ? 'Enter' : 'Create account'}
+          <button type="submit" className="primary-btn mono login-submit" disabled={pending}>
+            {pending ? '…' : mode === 'signin' ? 'Enter channel' : 'Create account'}
           </button>
         </form>
       </div>
