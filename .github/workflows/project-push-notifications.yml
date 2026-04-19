@@ -1,9 +1,9 @@
 # Scheduled Web Push when a campaign (quests.campaign_slug ≠ default) goes live.
 #
-# Repository secrets (Settings → Secrets and variables → Actions):
+# Environment/repository secrets or variables (Settings → Secrets and variables → Actions):
 #   SUPABASE_URL                — Project Settings → API → Project URL
 #   SUPABASE_SERVICE_ROLE_KEY   — service_role key (never expose to the browser)
-#   VAPID_PUBLIC_KEY            — same string as Netlify env VITE_VAPID_PUBLIC_KEY
+#   VAPID_PUBLIC_KEY            — same string as Netlify env VITE_VAPID_PUBLIC_KEY (fallback supported)
 #   VAPID_PRIVATE_KEY           — keep server-side only (GitHub secret + optional Supabase vault)
 #   VAPID_SUBJECT               — contact URI, e.g. mailto:you@yourdomain.com (required by web-push)
 #
@@ -22,6 +22,7 @@ on:
 jobs:
   notify:
     runs-on: ubuntu-latest
+    environment: production
     permissions:
       contents: read
     steps:
@@ -40,9 +41,22 @@ jobs:
       - name: Send pending project notifications
         working-directory: quest-hunter-web
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          VAPID_PUBLIC_KEY: ${{ secrets.VAPID_PUBLIC_KEY }}
-          VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
-          VAPID_SUBJECT: ${{ secrets.VAPID_SUBJECT }}
-        run: node scripts/notify-new-projects.mjs
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL || vars.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY || vars.SUPABASE_SERVICE_ROLE_KEY }}
+          VAPID_PUBLIC_KEY: ${{ secrets.VAPID_PUBLIC_KEY || secrets.VITE_VAPID_PUBLIC_KEY || vars.VAPID_PUBLIC_KEY || vars.VITE_VAPID_PUBLIC_KEY }}
+          VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY || vars.VAPID_PRIVATE_KEY }}
+          VAPID_SUBJECT: ${{ secrets.VAPID_SUBJECT || vars.VAPID_SUBJECT }}
+        run: |
+          missing=()
+          for name in SUPABASE_URL SUPABASE_SERVICE_ROLE_KEY VAPID_PUBLIC_KEY VAPID_PRIVATE_KEY VAPID_SUBJECT; do
+            if [ -z "${!name}" ]; then
+              missing+=("$name")
+            fi
+          done
+
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "Missing required workflow config: ${missing[*]}"
+            exit 1
+          fi
+
+          node scripts/notify-new-projects.mjs
