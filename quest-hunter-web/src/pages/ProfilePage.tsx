@@ -1,13 +1,17 @@
 import { type FormEvent, useCallback, useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
+import {
+  hasActivePushSubscription,
+  pushNotificationsConfigured,
+  pushNotificationsSupported,
+  subscribeToProjectLivePushes,
+  unsubscribeFromProjectLivePushes,
+} from '../lib/pushNotifications'
 import { getProjectGroupLabel } from '../lib/projectLabels'
 import { errorLooksLikeMissingFinaleHistoryRpc } from '../lib/questSchema'
+import { fetchLeaderboard, type LeaderboardRow } from '../lib/leaderboard'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
-
-type BoardRow = {
-  hunter_name: string | null
-  xp: number
-}
 
 type FinaleBranchRow = {
   quest_slug: string
@@ -48,8 +52,7 @@ export function ProfilePage() {
   const [hunterName, setHunterName] = useState(profile?.hunter_name ?? '')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [board, setBoard] = useState<BoardRow[]>([])
-  const [boardLoading, setBoardLoading] = useState(true)
+  const [board, setBoard] = useState<LeaderboardRow[]>([])
   const [finaleRows, setFinaleRows] = useState<FinaleBranchRow[]>([])
   const [finaleLoading, setFinaleLoading] = useState(true)
 
@@ -65,6 +68,15 @@ export function ProfilePage() {
   }, [finaleRows])
 
   const [finaleProjectOpen, setFinaleProjectOpen] = useState<Record<string, boolean>>({})
+
+  const [pushAlertsOn, setPushAlertsOn] = useState(false)
+  const [pushAlertsBusy, setPushAlertsBusy] = useState(false)
+  const [pushAlertsErr, setPushAlertsErr] = useState<string | null>(null)
+
+  const showIosPwaPushHint = useMemo(
+    () => typeof navigator !== 'undefined' && /iPhone|iPad|iPod/.test(navigator.userAgent),
+    [],
+  )
 
   useEffect(() => {
     setFinaleProjectOpen((prev) => {
@@ -99,23 +111,28 @@ export function ProfilePage() {
   useEffect(() => {
     let cancelled = false
 
-    async function loadBoard() {
-      setBoardLoading(true)
-      const { data, error: err } = await supabase
-        .from('profiles')
-        .select('hunter_name, xp')
-        .not('hunter_name', 'is', null)
-        .order('xp', { ascending: false })
-        .limit(25)
-
-      if (cancelled) return
-      if (err) {
-        console.error(err)
-        setBoard([])
-      } else {
-        setBoard((data ?? []) as BoardRow[])
+    async function syncPushState() {
+      if (!user?.id || !pushNotificationsSupported()) {
+        if (!cancelled) setPushAlertsOn(false)
+        return
       }
-      setBoardLoading(false)
+      const on = await hasActivePushSubscription()
+      if (!cancelled) setPushAlertsOn(on)
+    }
+
+    void syncPushState()
+    return () => {
+      cancelled = true
+    }
+  }, [user?.id])
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadBoard() {
+      const data = await fetchLeaderboard(25)
+      if (cancelled) return
+      setBoard(data)
     }
 
     void loadBoard()
@@ -203,14 +220,24 @@ export function ProfilePage() {
     }
 
     await refreshProfile()
-    const { data: boardData } = await supabase
-      .from('profiles')
-      .select('hunter_name, xp')
-      .not('hunter_name', 'is', null)
-      .order('xp', { ascending: false })
-      .limit(25)
-    setBoard((boardData ?? []) as BoardRow[])
+    setBoard(await fetchLeaderboard(25))
   }
+
+  const toggleProjectPushAlerts = useCallback(async () => {
+    if (!user?.id || !pushNotificationsSupported()) return
+    setPushAlertsBusy(true)
+    setPushAlertsErr(null)
+    const nextOn = !pushAlertsOn
+    const res = nextOn
+      ? await subscribeToProjectLivePushes(user.id)
+      : await unsubscribeFromProjectLivePushes(user.id)
+    setPushAlertsBusy(false)
+    if (!res.ok) {
+      setPushAlertsErr(res.message ?? 'Kon push niet bijwerken.')
+      return
+    }
+    setPushAlertsOn(nextOn)
+  }, [pushAlertsOn, user?.id])
 
   return (
     <section className="panel profile-page">
@@ -257,7 +284,11 @@ export function ProfilePage() {
               '—'
             )}
           </span>
-          <span className="profile-stat-hint muted small">Top hunters this board</span>
+          <span className="profile-stat-hint muted small">
+            <Link to="/leaderboard" className="mono accent-strong">
+              Podium · full board
+            </Link>
+          </span>
         </article>
       </div>
 
@@ -290,6 +321,52 @@ export function ProfilePage() {
                 {saving ? 'Committing…' : 'Save callsign'}
               </button>
             </form>
+          </div>
+
+          <div className="profile-card profile-card--push">
+            <h2 className="profile-card-title mono">Projectmeldingen</h2>
+            <p className="muted small profile-card-lede">
+              PWA: een korte melding wanneer een nieuw project (campagne) online gaat — niet voor de standaard
+              <span className="mono"> default</span> lijst.
+            </p>
+            {showIosPwaPushHint ? (
+              <p className="muted small profile-empty-hint">
+                iPhone/iPad: zet de site op je beginscherm (Safari → Deel → Zet op beginscherm) zodat
+                installatie- en pushvoorwaarden van iOS het goed doen.
+              </p>
+            ) : null}
+            {!pushNotificationsConfigured() ? (
+              <p className="muted small profile-empty-hint">
+                Push is niet ingesteld op deze omgeving (ontbreekt <span className="mono">VITE_VAPID_PUBLIC_KEY</span>).
+              </p>
+            ) : !user?.id ? (
+              <p className="muted small profile-empty-hint">Log in om meldingen in te schakelen.</p>
+            ) : (
+              <>
+                <div className="profile-push-row">
+                  <button
+                    type="button"
+                    className={pushAlertsOn ? 'ghost-btn mono' : 'primary-btn mono'}
+                    disabled={pushAlertsBusy}
+                    onClick={() => void toggleProjectPushAlerts()}
+                  >
+                    {pushAlertsBusy
+                      ? 'Bezig…'
+                      : pushAlertsOn
+                        ? 'Meldingen uit'
+                        : 'Meldingen aan'}
+                  </button>
+                  <span className="mono small muted profile-push-status">
+                    {pushAlertsOn ? 'Ingeschakeld op dit apparaat' : 'Uit'}
+                  </span>
+                </div>
+                {pushAlertsErr ? (
+                  <p className="error mono small" role="alert">
+                    {pushAlertsErr}
+                  </p>
+                ) : null}
+              </>
+            )}
           </div>
 
           <section className="profile-card profile-card--finale">
@@ -381,44 +458,6 @@ export function ProfilePage() {
             )}
           </section>
         </div>
-
-        <aside className="profile-side">
-          <div className="profile-card profile-card--board">
-            <h2 className="profile-card-title mono">Leaderboard</h2>
-            <p className="muted small profile-card-lede">Top {board.length || 25} by XP.</p>
-            {boardLoading ? (
-              <p className="mono muted profile-card-loading">Loading ranks…</p>
-            ) : board.length === 0 ? (
-              <p className="muted small profile-empty-hint">No ranked operators yet.</p>
-            ) : (
-              <ol className="leaderboard leaderboard--profile mono">
-                {board.map((row, i) => {
-                  const rank = i + 1
-                  const isSelf = Boolean(callsign && row.hunter_name === callsign)
-                  const topClass =
-                    rank === 1 ? 'leaderboard-row--gold' : rank === 2 ? 'leaderboard-row--silver' : rank === 3 ? 'leaderboard-row--bronze' : ''
-                  return (
-                    <li
-                      key={`${row.hunter_name}-${i}`}
-                      className={[topClass, isSelf ? 'leaderboard-row--self' : ''].filter(Boolean).join(' ')}
-                    >
-                      <span className="rank" aria-label={`Rank ${rank}`}>
-                        {rank <= 3 ? (
-                          <span className="leaderboard-medal" aria-hidden>
-                            {rank === 1 ? '◆' : rank === 2 ? '◇' : '△'}
-                          </span>
-                        ) : null}
-                        <span className="leaderboard-rank-num">{rank}</span>
-                      </span>
-                      <span className="name">{row.hunter_name}</span>
-                      <span className="xp">{row.xp.toLocaleString()} XP</span>
-                    </li>
-                  )
-                })}
-              </ol>
-            )}
-          </div>
-        </aside>
       </div>
     </section>
   )

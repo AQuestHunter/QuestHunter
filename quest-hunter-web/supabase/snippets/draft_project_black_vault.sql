@@ -14,7 +14,7 @@ values
     'De kluis die niet bestaat — Quest 1 — De kaart die niet bestaat',
     $json$
 {
-  "intro": "🔐 QUEST 1 — VOORBEREIDINGEN: DE KAART DIE NIET BESTAAT\n\nGerucht: een black vault — off-books, geen registratie. Jij krijgt drie bronnen die elkaar zouden moeten dekken… en dat doen ze niet.\n\n**Laag A — Fragment uit energie-dashboard (kWh / uur, peak):**\n```\n       1     2     3     4\nA     42    12     9    55\nB     18     0    41    20    ← rij B: kWh; 0 = ‘geen meting / leeg’\nC    cam   cam    ∅    cam   ← ∅ = geen camerastream (niet offline, bewust leeg)\nD     +1    +2    +6    +1    ← thermisch verschil (°C vs omgeving), laatste meetronde\n```\n**Laag B — Officieel plattegrond-label (zelfde rooster):** cellen met een naam op de getekende plaat: A1 LOBBY, B1 TRAP, A4 TRESOR, D4 ARCHIEF — alles behalve **B3** heeft een contour op de tekening. Cel **B3** staat op de plot als massieve muur.\n**Laag C — Interne mailtrail (codetaal):** elk bericht eindigt met een TAG in het honderdvoud:\n```\nM1 TAG:1800 / init: NV (Niet Verklaard)\nM2 TAG:2100 / init: NV\nM3 TAG:5123 / init: NV\n```\n**Regel:** tel de drie TAG-waarden op (**1800 + 2100 + 5123 = 9023**). Neem de **laatste twee cijfers** → **23**. Lees **23** als **tweede cijfer = rij** en **laatste cijfer = kolom**: rij **2** → **B** (1=A, 2=B, 3=C, 4=D); kolom **3**. Notatie: **B3** (kruis met laag A en B).\n\nKopregel op het interceptblad (classificatie): **BLACK**.\n\nNiet de kluisruimte zelf is het anker — iets naast het plangebied liegt. Waar klampt de werkelijkheid los van het papier?",
+  "intro": "🔐 QUEST 1 — VOORBEREIDINGEN: DE KAART DIE NIET BESTAAT\n\nGerucht: een black vault — off-books, geen registratie. Jij krijgt drie bronnen die elkaar zouden moeten dekken… en dat doen ze niet.\n\n**Laag A — Fragment uit energie-dashboard (kWh / uur, peak):**\n```\n       1     2     3     4\nA     42    12     9    55\nB     18     0    41    20    ← rij B: kWh; 0 = ‘geen meting / leeg’\nC    cam   cam    ∅    cam   ← ∅ = geen camerastream (niet offline, bewust leeg)\nD     +1    +2    +6    +1    ← thermisch verschil (°C vs omgeving), laatste meetronde\n```\n**Laag B — Officieel plattegrond-label (zelfde rooster):** cellen met een naam op de getekende plaat: A1 LOBBY, B1 TRAP, A4 TRESOR, D4 ARCHIEF — alles behalve **B3** heeft een contour op de tekening. Cel **B3** staat op de plot als massieve muur.\n**Laag C — Interne mailtrail (codetaal):** elk bericht eindigt met een TAG in het honderdvoud:\n```\nM1 TAG:1800 / init: NV (Niet Verklaard)\nM2 TAG:2100 / init: NV\nM3 TAG:5123 / init: NV\n```\n**Regel:** tel de drie TAG-waarden uit de mailtabel op; gebruik het totaal om via de **laatste twee decimalen** een roosterplek af te leiden (tiental → rij 1–4 als A–D, eenheid → kolom 1–4 — exact zoals je interne mapping-doc het definieert). Kruis dat met Laag A en B.\n\nKopregel op het interceptblad (classificatie): **BLACK**.\n\nNiet de kluisruimte zelf is het anker — iets naast het plangebied ligt. Waar komt de werkelijkheid los van het papier?",
   "puzzles": [
     {
       "id": "bv01-p1",
@@ -113,7 +113,7 @@ $json$::jsonb,
       "hints": [
         "Richting: decodeer ook de andere twee tokens met **BANK** om te zien wie wél roster-achtig overblijft.",
         "Mechaniek: vergelijk met de HR-flash — welke naam matcht degene die dood zou moeten zijn?",
-        "Startpunt: als EENX → DEAN, bevestig dat de anderen geen DEAN zijn."
+        "Startpunt: tel voor elk token uit wie het wordt na decode — wie botst met ‘dood’ in HR?"
       ],
       "wrongFeedback": "De roster leest net plausibel genoeg — maar één naam botst met HR: wie is dat volgens jouw decrypts?",
       "answer": "DEAN",
@@ -145,7 +145,7 @@ $json$::jsonb,
       "hints": [
         "Richting: 01001000 is 72 in decimaal — welke ASCII-hoofdletter is dat?",
         "Mechaniek: zet elk 8-bits blok om naar een decimaal en map naar ASCII.",
-        "Startpunt: H, I, D, E — lees als één woord."
+        "Startpunt: na omzetting krijg je vier opeenvolgende ASCII-hoofdletters die samen een kort consolewerkwoord vormen."
       ],
       "wrongFeedback": "De bitlengtes kloppen — je alfabetmapping is één stap van de doorbraak verwijderd.",
       "answer": "HIDE",
@@ -158,7 +158,7 @@ $json$::jsonb,
       "hints": [
         "Richting: decodeer letter voor letter — `--` is M, `..` is I, `...` is S.",
         "Mechaniek: vier letters achter elkaar — geen cijfers.",
-        "Startpunt: M-I-S-S — controleer de derde en vierde telstreek."
+        "Startpunt: vier letters; laatste twee tekens zijn een dubbel in het woord — denk aan ‘mis’ als kern."
       ],
       "wrongFeedback": "Het ritme is regelmatig — je bent één streep of punt van de juiste cluster af.",
       "answer": "MISS",
@@ -171,7 +171,7 @@ $json$::jsonb,
       "hints": [
         "Richting: zoek het eerste tijdstip waar kolom 2 niet OPEN is.",
         "Mechaniek: niet ‘OK’ — het gaat om de tweede kolom-string.",
-        "Startpunt: op 12:01:30 is iets stilgevraagd — wat staat daar letterlijk?"
+        "Startpunt: kijk naar kolom 2 van de eerste regel waar het gedrag breekt met een monotone OPEN-keten."
       ],
       "wrongFeedback": "Je focus op statuscodes is logisch — maar de vraag wil het **command** op de afwijkende regel.",
       "answer": "SILENT",
@@ -218,7 +218,7 @@ $json$::jsonb,
         "Mechaniek: elk paar hex-cijfers is één ASCII-teken.",
         "Startpunt: 48 is ‘H’, 4F is ‘O’…"
       ],
-      "wrongFeedback": "Je decimale omzetting kloopt bijna — controleer de laatste byte als letter ‘D’.",
+      "wrongFeedback": "Je decimale omzetting klopt bijna — controleer de laatste byte als letter ‘D’.",
       "answer": "HOLD",
       "inputType": "text",
       "xp": 34
@@ -231,7 +231,7 @@ $json$::jsonb,
         "Mechaniek: vergelijk die chronologische lijst met printvolgorde A–B–C — welke letter blokkeert een ‘tussen’-tijdstempel op de verkeerde plek?",
         "Startpunt: zet de drie regels in **tijdsvolgorde** en leg die naast printvolgorde — één label staat tussen twee anderen die chronologisch eerder hoorden."
       ],
-      "wrongFeedback": "Alle drie zijn technisch geldige ACK’s — focust op **documentpositie** versus **tijdsorde**.",
+      "wrongFeedback": "Alle drie zijn technisch geldige ACK’s — richt je op **documentpositie** versus **tijdsorde**.",
       "answer": "B",
       "inputType": "choice",
       "choices": ["A", "B", "C"],

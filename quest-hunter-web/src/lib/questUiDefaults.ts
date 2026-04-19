@@ -4,6 +4,8 @@ import type { BranchPathKey, QuestBranchUiCopy, QuestUiCopy } from '../types/que
 export type QuestUiDraft = {
   introKicker: string
   introCta: string
+  reviewBriefingLabel: string
+  backToDossierLabel: string
   loadingMessage: string
   challengeBadge: string
   hintLabel: string
@@ -34,6 +36,8 @@ export type ResolvedBranchUi = { kicker: string; title: string; description: str
 export type ResolvedQuestUi = {
   introKicker: string
   introCta: string
+  reviewBriefingLabel: string
+  backToDossierLabel: string
   loadingMessage: string
   challengeBadge: string
   hintLabel: string
@@ -77,6 +81,8 @@ const DEFAULT_BRANCH: Record<BranchPathKey, ResolvedBranchUi> = {
 export const DEFAULT_QUEST_UI = {
   introKicker: 'Briefing',
   introCta: 'Enter operation',
+  reviewBriefingLabel: 'Review briefing',
+  backToDossierLabel: 'Back to dossier',
   loadingMessage: 'Decrypting dossier…',
   challengeBadge: 'Challenge',
   hintLabel: 'Intel',
@@ -103,6 +109,8 @@ export function emptyUiDraft(): QuestUiDraft {
   return {
     introKicker: '',
     introCta: '',
+    reviewBriefingLabel: '',
+    backToDossierLabel: '',
     loadingMessage: '',
     challengeBadge: '',
     hintLabel: '',
@@ -144,6 +152,8 @@ export function parseUiDraftFromBody(raw: unknown): QuestUiDraft {
   const str = (k: string) => (typeof ui[k] === 'string' ? (ui[k] as string) : '')
   d.introKicker = str('introKicker')
   d.introCta = str('introCta')
+  d.reviewBriefingLabel = str('reviewBriefingLabel')
+  d.backToDossierLabel = str('backToDossierLabel')
   d.loadingMessage = str('loadingMessage')
   d.challengeBadge = str('challengeBadge')
   d.hintLabel = str('hintLabel')
@@ -213,9 +223,13 @@ export function compactUiDraft(draft: QuestUiDraft): QuestUiCopy | undefined {
   }
   const a = w(draft.introKicker)
   const b = w(draft.introCta)
+  const rb = w(draft.reviewBriefingLabel)
+  const bd = w(draft.backToDossierLabel)
   const c = w(draft.loadingMessage)
   if (a) out.introKicker = a
   if (b) out.introCta = b
+  if (rb) out.reviewBriefingLabel = rb
+  if (bd) out.backToDossierLabel = bd
   if (c) out.loadingMessage = c
   const d1 = w(draft.challengeBadge)
   const d2 = w(draft.hintLabel)
@@ -282,6 +296,8 @@ export function mergeQuestUi(ui?: QuestUiCopy | null): ResolvedQuestUi {
   return {
     introKicker: pick('introKicker', DEFAULT_QUEST_UI.introKicker),
     introCta: pick('introCta', DEFAULT_QUEST_UI.introCta),
+    reviewBriefingLabel: pick('reviewBriefingLabel', DEFAULT_QUEST_UI.reviewBriefingLabel),
+    backToDossierLabel: pick('backToDossierLabel', DEFAULT_QUEST_UI.backToDossierLabel),
     loadingMessage: pick('loadingMessage', DEFAULT_QUEST_UI.loadingMessage),
     challengeBadge: pick('challengeBadge', DEFAULT_QUEST_UI.challengeBadge),
     hintLabel: pick('hintLabel', DEFAULT_QUEST_UI.hintLabel),

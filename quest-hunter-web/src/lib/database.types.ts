@@ -162,6 +162,39 @@ export type Database = {
         }
         Relationships: []
       }
+      push_subscriptions: {
+        Row: {
+          id: string
+          user_id: string
+          endpoint: string
+          p256dh: string
+          auth: string
+          user_agent: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          endpoint: string
+          p256dh: string
+          auth: string
+          user_agent?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          endpoint?: string
+          p256dh?: string
+          auth?: string
+          user_agent?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: Record<string, never>
     Functions: {
@@ -224,6 +257,13 @@ export type Database = {
           starts_at: string | null
           ends_at: string | null
           resolve_status: string
+        }[]
+      }
+      list_active_player_campaigns: {
+        Args: Record<string, never>
+        Returns: {
+          campaign_slug: string
+          display_name: string
         }[]
       }
       get_player_finale_branch_history: {

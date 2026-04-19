@@ -1,0 +1,48 @@
+# Scheduled Web Push when a campaign (quests.campaign_slug ≠ default) goes live.
+#
+# Repository secrets (Settings → Secrets and variables → Actions):
+#   SUPABASE_URL                — Project Settings → API → Project URL
+#   SUPABASE_SERVICE_ROLE_KEY   — service_role key (never expose to the browser)
+#   VAPID_PUBLIC_KEY            — same string as Netlify env VITE_VAPID_PUBLIC_KEY
+#   VAPID_PRIVATE_KEY           — keep server-side only (GitHub secret + optional Supabase vault)
+#   VAPID_SUBJECT               — contact URI, e.g. mailto:you@yourdomain.com (required by web-push)
+#
+# Generate keys locally: cd quest-hunter-web && npx web-push generate-vapid-keys
+
+name: Project live push notifications
+
+on:
+  schedule:
+    # 3× per dag om 08:00, 14:00 en 20:00 lokale tijd voor Nederland **tijdens zomertijd (CEST)**:
+    # dit is 06:00, 12:00 en 18:00 UTC. In winter (CET) worden dat lokaal 07:00, 13:00 en 19:00 met dezelfde cron;
+    # wil je dan juist 8/14/20 uur: vervang door '0 7,13,19 * * *'. GitHub gebruikt UTC; kleine vertraging kan.
+    - cron: '0 6,12,18 * * *'
+  workflow_dispatch:
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: quest-hunter-web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: quest-hunter-web
+
+      - name: Send pending project notifications
+        working-directory: quest-hunter-web
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          VAPID_PUBLIC_KEY: ${{ secrets.VAPID_PUBLIC_KEY }}
+          VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
+          VAPID_SUBJECT: ${{ secrets.VAPID_SUBJECT }}
+        run: node scripts/notify-new-projects.mjs

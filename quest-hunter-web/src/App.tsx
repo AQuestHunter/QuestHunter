@@ -7,6 +7,7 @@ import { LoginPage } from './pages/LoginPage'
 import { ProfilePage } from './pages/ProfilePage'
 import { EnvCheckPage } from './pages/EnvCheckPage'
 import { QuestsPage } from './pages/QuestsPage'
+import { LeaderboardPage } from './pages/LeaderboardPage'
 
 export default function App() {
   return (
@@ -23,6 +24,7 @@ export default function App() {
       >
         <Route path="/" element={<Navigate to="/quests" replace />} />
         <Route path="/quests" element={<QuestsPage />} />
+        <Route path="/leaderboard" element={<LeaderboardPage />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route
           path="/admin"

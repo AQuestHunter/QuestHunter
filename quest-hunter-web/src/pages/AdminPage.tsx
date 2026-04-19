@@ -8,7 +8,7 @@ export function AdminPage() {
   return (
     <section className="panel admin-page">
       <h1>Admin</h1>
-      <p className="muted small">
+      <p className="muted small admin-page-meta">
         Requires <code className="mono">app_metadata.role = &quot;admin&quot;</code> on your user in Supabase (Auth →
         Users → user → App metadata as JSON: <code className="mono">{`{ "role": "admin" }`}</code>
         ).

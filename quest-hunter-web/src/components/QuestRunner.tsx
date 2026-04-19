@@ -392,6 +392,14 @@ export function QuestRunner({ summary, onDone }: Props) {
     onDone?.()
   }
 
+  const scrollToDossierTop = useCallback(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }, [])
+
+  const reopenBriefing = useCallback(() => {
+    setIntroAck(false)
+  }, [])
+
   if (loadError) {
     return (
       <article className={`quest-terminal quiz-surface quiz-error ${shake ? 'shake' : ''}`}>
@@ -434,6 +442,15 @@ export function QuestRunner({ summary, onDone }: Props) {
         <div className="quiz-intro-inner">
           <p className="quiz-intro-kicker mono">{ui.introKicker}</p>
           <p className="narrative quiz-narrative">{payload.intro}</p>
+          <nav className="quiz-runner-nav" aria-label="Dossier navigation">
+            <button
+              type="button"
+              className="ghost-btn mono small quiz-runner-nav-btn"
+              onClick={scrollToDossierTop}
+            >
+              {ui.backToDossierLabel}
+            </button>
+          </nav>
           <button
             type="button"
             className="primary-btn mono quiz-intro-cta"
@@ -498,6 +515,16 @@ export function QuestRunner({ summary, onDone }: Props) {
           <span className="quiz-head-badge">{ui.preFinaleBadge}</span>
           <span className="quiz-head-step">{ui.preFinaleHeadline}</span>
         </header>
+        <nav className="quiz-runner-nav" aria-label="Dossier navigation">
+          {payload.intro.trim().length > 0 ? (
+            <button type="button" className="ghost-btn mono small quiz-runner-nav-btn" onClick={reopenBriefing}>
+              {ui.reviewBriefingLabel}
+            </button>
+          ) : null}
+          <button type="button" className="ghost-btn mono small quiz-runner-nav-btn" onClick={scrollToDossierTop}>
+            {ui.backToDossierLabel}
+          </button>
+        </nav>
         <div className="quiz-body">
           {slotSummary ? <p className="narrative quiz-narrative">{slotSummary}</p> : null}
           {slotImplication ? (
@@ -554,6 +581,16 @@ export function QuestRunner({ summary, onDone }: Props) {
             {step + 1} / {puzzles.length}
           </span>
         </header>
+        <nav className="quiz-runner-nav" aria-label="Dossier navigation">
+          {payload.intro.trim().length > 0 ? (
+            <button type="button" className="ghost-btn mono small quiz-runner-nav-btn" onClick={reopenBriefing}>
+              {ui.reviewBriefingLabel}
+            </button>
+          ) : null}
+          <button type="button" className="ghost-btn mono small quiz-runner-nav-btn" onClick={scrollToDossierTop}>
+            {ui.backToDossierLabel}
+          </button>
+        </nav>
         <div className="quiz-lives-bar" aria-live="polite">
           <span className="quiz-lives-label muted small">Charges</span>
           <span className="quiz-lives-dots" title="Wrong answer uses one charge. +1 every 5 min up to 5.">
@@ -780,6 +817,16 @@ export function QuestRunner({ summary, onDone }: Props) {
         <span className="quiz-head-badge quiz-head-badge-finale">{ui.finaleBadge}</span>
         <span className="quiz-head-step">{ui.finaleHeadline}</span>
       </header>
+      <nav className="quiz-runner-nav" aria-label="Dossier navigation">
+        {payload.intro.trim().length > 0 ? (
+          <button type="button" className="ghost-btn mono small quiz-runner-nav-btn" onClick={reopenBriefing}>
+            {ui.reviewBriefingLabel}
+          </button>
+        ) : null}
+        <button type="button" className="ghost-btn mono small quiz-runner-nav-btn" onClick={scrollToDossierTop}>
+          {ui.backToDossierLabel}
+        </button>
+      </nav>
       <div className="quiz-body">
         <p className="quiz-prompt quiz-finale-prompt">{payload.finalePrompt}</p>
         {finaleError ? (

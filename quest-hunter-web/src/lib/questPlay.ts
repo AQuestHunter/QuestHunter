@@ -16,6 +16,51 @@ export function getPlayerCampaignSlugFromEnv(): string {
   return String(raw).trim()
 }
 
+const PLAYER_CAMPAIGN_STORAGE_KEY = 'questHunter.playerCampaignSlug'
+
+/**
+ * Slug for `get_player_resolved_quest_summary`: per-device override, else `VITE_QUEST_CAMPAIGN_SLUG` / `default`.
+ * When several projects are live, the Quests page lists them and stores the player’s choice here.
+ */
+export function getPlayerCampaignSlugForPlay(): string {
+  if (typeof window === 'undefined') return getPlayerCampaignSlugFromEnv()
+  try {
+    const raw = window.localStorage.getItem(PLAYER_CAMPAIGN_STORAGE_KEY)
+    if (raw != null && String(raw).trim() !== '') return String(raw).trim()
+  } catch {
+    /* private / blocked storage */
+  }
+  return getPlayerCampaignSlugFromEnv()
+}
+
+export function setPlayerCampaignSlugPreference(slug: string | null): void {
+  if (typeof window === 'undefined') return
+  try {
+    if (slug == null || String(slug).trim() === '') {
+      window.localStorage.removeItem(PLAYER_CAMPAIGN_STORAGE_KEY)
+    } else {
+      window.localStorage.setItem(PLAYER_CAMPAIGN_STORAGE_KEY, String(slug).trim())
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
+export type ActivePlayerCampaign = { slug: string; label: string }
+
+export async function fetchActivePlayerCampaigns(): Promise<ActivePlayerCampaign[]> {
+  const { data, error } = await supabase.rpc('list_active_player_campaigns')
+  if (error) {
+    console.warn('list_active_player_campaigns:', error.message)
+    return []
+  }
+  const rows = (data ?? []) as { campaign_slug: string; display_name: string }[]
+  return rows.map((r) => ({
+    slug: r.campaign_slug,
+    label: (r.display_name?.trim() || r.campaign_slug).trim(),
+  }))
+}
+
 export async function fetchActiveQuestSummaries(): Promise<{
   data: QuestSummary[] | null
   error: string | null

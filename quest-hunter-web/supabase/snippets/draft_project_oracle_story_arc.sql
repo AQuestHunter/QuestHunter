@@ -6,7 +6,7 @@ insert into public.quests (slug, title, body, is_published, archived)
 values
   (
     'oracle-02a-control',
-    'PROJECT ORACLE — Quest 2A — CONTROL (draft)',
+    'PROJECT ORACLE — Quest 2A — CONTROL',
     $json$
 {
   "intro": "Quest 2 — branch: CONTROL.\n\nYou keep intervening. ORACLE opens a second channel: your leak is mirrored to a buffer node.\n\nSync header (hex dump, each pair = one ASCII byte):\n`4F 52 41 43 4C 45`\n—that spells the six-letter kernel label in ASCII.\n\nBuffer rule: **ANCHOR_TIME = LEAK_TIME + 20 min** with LEAK_TIME = 23:40 (Quest 1). Record midnight as **00:00**.\n\nYour route name for this segment is literally your branch choice — here as the word for active steering.",
@@ -45,7 +45,7 @@ $json$::jsonb,
   ),
   (
     'oracle-02b-observe',
-    'PROJECT ORACLE — Quest 2B — OBSERVE (draft)',
+    'PROJECT ORACLE — Quest 2B — OBSERVE',
     $json$
 {
   "intro": "Quest 2 — branch: OBSERVE.\n\nYou do not intervene — so you see double logging.\n\nPattern note (ORACLE internals): the ‘observer offset’ follows the Fibonacci sequence starting 1, 1 — i.e. 1, 1, 2, 3, 5, …\n\nThe dossier uses **variant** when the header matches but the footer differs.",
@@ -85,7 +85,7 @@ $json$::jsonb,
   ),
   (
     'oracle-02c-influence',
-    'PROJECT ORACLE — Quest 2C — INFLUENCE (draft)',
+    'PROJECT ORACLE — Quest 2C — INFLUENCE',
     $json$
 {
   "intro": "Quest 2 — branch: INFLUENCE.\n\nYou use the leak as leverage.\n\nInternal schema (shown in your panel):\nINPUT → PROCESS → OUTPUT\n\nYou inject **NOISE** on the channel. To time impact: start **14:20**, add **50** minutes for the first measurement point.",
@@ -124,7 +124,7 @@ $json$::jsonb,
   ),
   (
     'oracle-04a-control',
-    'PROJECT ORACLE — Quest 4A — CONTROL (draft)',
+    'PROJECT ORACLE — Quest 4A — CONTROL',
     $json$
 {
   "intro": "Quest 4 — branch: CONTROL.\n\nThree case files:\n• **23:40-PARK-LENA** — canon from Quest 1\n• **23:40-STATION-MARCO** — shifted location/id\n• **00:10-NODE-EMPTY** — empty node\n\nLocation labels in this set: PARK, STATION, NODE — each appears once.\n\nTo seize a stream ORACLE uses the CLI word SQL uses to delete rows — here meaning **hard override** of an active session.",
@@ -164,7 +164,7 @@ $json$::jsonb,
   ),
   (
     'oracle-04b-observe',
-    'PROJECT ORACLE — Quest 4B — OBSERVE (draft)',
+    'PROJECT ORACLE — Quest 4B — OBSERVE',
     $json$
 {
   "intro": "Quest 4 — branch: OBSERVE.\n\nYou correlate three dossiers that share the same **header scaffold**.\n\nGrid (orientation only — letters repeat):\n\n```\nL E A K\nL E A K\nL E ?\n```\n\nRow 3 completes the same word as rows 1–2: **LEAK** stays the anchor word.\n\nFor sampling ORACLE often uses a **sample** — a subset of the population.",
@@ -204,7 +204,7 @@ $json$::jsonb,
   ),
   (
     'oracle-04c-influence',
-    'PROJECT ORACLE — Quest 4C — INFLUENCE (draft)',
+    'PROJECT ORACLE — Quest 4C — INFLUENCE',
     $json$
 {
   "intro": "Quest 4 — branch: INFLUENCE.\n\nYou feed the network mini-leaks. ORACLE rescales **weights**: each class gets a coefficient.\n\nBinary integrity check on the smallest field:\nregister `0101` — **flip only the LSB** (last bit) for parity.\n\nWhen output returns into the model you close a **feedback** loop.",
@@ -243,7 +243,7 @@ $json$::jsonb,
   ),
   (
     'oracle-06a-control',
-    'PROJECT ORACLE — Quest 6A — CONTROL (draft)',
+    'PROJECT ORACLE — Quest 6A — CONTROL',
     $json$
 {
   "intro": "Quest 6 — branch: CONTROL.\n\nInternal timer dump:\n```\npredicted_by=OBSERVER\nticks: T0=00:00, step=+7 min\n```\n\nEach tick adds **7 minutes**. **Interrupt** on vector **ABORT** stops the timer hard.\n\nIf you act before the tick — do you measure causality or yourself?",
@@ -282,7 +282,7 @@ $json$::jsonb,
   ),
   (
     'oracle-06b-observe',
-    'PROJECT ORACLE — Quest 6B — OBSERVE (draft)',
+    'PROJECT ORACLE — Quest 6B — OBSERVE',
     $json$
 {
   "intro": "Quest 6 — branch: OBSERVE.\n\nTag logged after you look:\n`observer_effect=true`\n\nIf the system measures your **decisions** instead of only the outside world, the experiment is reflexive.\n\nPROJECT ORACLE chiefly measures **reactions** to incomplete information — plural noun from the manifest.",
@@ -323,7 +323,7 @@ $json$::jsonb,
   ),
   (
     'oracle-06c-influence',
-    'PROJECT ORACLE — Quest 6C — INFLUENCE (draft)',
+    'PROJECT ORACLE — Quest 6C — INFLUENCE',
     $json$
 {
   "intro": "Quest 6 — branch: INFLUENCE.\n\nYou force a different **top-1**: classes {A,B,C}. After injection **B** wins.\n\nTraining uses a **gradient** — update vector.\n\nIf manipulation fails ORACLE raises **loss** in the log.",
@@ -362,7 +362,7 @@ $json$::jsonb,
   ),
   (
     'oracle-08a-control',
-    'PROJECT ORACLE — Quest 8A — CONTROL (draft)',
+    'PROJECT ORACLE — Quest 8A — CONTROL',
     $json$
 {
   "intro": "Quest 8 — branch: CONTROL.\n\nExport list: your operator id sits under column **`subject_pool`** — not a field console but a **randomisation block**.\n\nTo wipe a row root uses the CLI word **DELETE** (as in SQL).\n\nSubjects who do not know they are in a trial are often called **blind** in the protocol.",
@@ -401,7 +401,7 @@ $json$::jsonb,
   ),
   (
     'oracle-08b-observe',
-    'PROJECT ORACLE — Quest 8B — OBSERVE (draft)',
+    'PROJECT ORACLE — Quest 8B — OBSERVE',
     $json$
 {
   "intro": "Quest 8 — branch: OBSERVE.\n\nMetadata labels in the dossier (all three named):\n**cohort**, **wave**, **replication**\n\n‘Replication’ = repeated measurement / reproducibility.\n\nLetter puzzle: take the **first letters** of those three words in order — a three-letter acronym.\n\nYou are no longer a neutral spectator: you fall under the protocol.",
@@ -441,7 +441,7 @@ $json$::jsonb,
   ),
   (
     'oracle-08c-influence',
-    'PROJECT ORACLE — Quest 8C — INFLUENCE (draft)',
+    'PROJECT ORACLE — Quest 8C — INFLUENCE',
     $json$
 {
   "intro": "Quest 8 — branch: INFLUENCE.\n\nYou spoof a **cohort** tag. The protocol **checksum** for cohort ids is:\n**sum of ASCII codes of the letters in `COHORT` modulo 100** (A=65 for reference — count only C,O,H,O,R,T).\n\nWhen spoof detection fires ORACLE writes a **penalty**.",
@@ -480,7 +480,7 @@ $json$::jsonb,
   ),
   (
     'oracle-09-lab',
-    'PROJECT ORACLE — Quest 9 — The lab (draft, linear)',
+    'PROJECT ORACLE — Quest 9 — The lab (linear)',
     $json$
 {
   "intro": "Quest 9 — interlude.\n\nAll branches exit at the same door. The terminal reads:\n\n`Confirm subject awareness (y/n)`\n\nSecondary line (small type):\n`pipeline_stage = 7 | role = SUBJECT`\n\nYou are no longer outside the experiment — you are the **pipeline**.",
@@ -519,7 +519,7 @@ $json$::jsonb,
   ),
   (
     'oracle-10-finale',
-    'PROJECT ORACLE — Quest 10 — Finale / revelation (draft, linear)',
+    'PROJECT ORACLE — Quest 10 — Finale / revelation (linear)',
     $json$
 {
   "intro": "Quest 10 — finale.\n\nPROJECT ORACLE is not a prediction engine. It is an instrument measuring **behavior** under uncertainty.\n\nManifest rule (checksum): **ORACLE** → letter positions A=1 … Z=26 → **O(15)+R(18)+A(1)+C(3)+L(12)+E(5) = 54**. Hold that value as **slot code**.\n\nYou are a **replicate** in a wave. Every puzzle yielded **telemetry**.",

@@ -12,6 +12,10 @@ export type QuestBranchUiCopy = {
 export type QuestUiCopy = {
   introKicker?: string
   introCta?: string
+  /** During play: return to the intro / briefing screen */
+  reviewBriefingLabel?: string
+  /** During play: scroll to the top of the page (dossier header on /quests) */
+  backToDossierLabel?: string
   loadingMessage?: string
   challengeBadge?: string
   hintLabel?: string

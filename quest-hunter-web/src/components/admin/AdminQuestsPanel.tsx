@@ -1,5 +1,6 @@
 import { type FormEvent, useCallback, useEffect, useMemo, useState } from 'react'
 import type { Json } from '../../lib/database.types'
+import { nameContainsForbiddenDraftSubstring } from '../../lib/nameContentPolicy'
 import { getProjectGroupLabel } from '../../lib/projectLabels'
 import { errorLooksLikeMissingCampaignMigration } from '../../lib/questSchema'
 import { supabase } from '../../lib/supabase'
@@ -475,6 +476,10 @@ export function AdminQuestsPanel() {
   async function saveProjectDisplayNameForCampaign(camp: string) {
     if (!hasCampaignSchema) return
     const name = projectNameDraft.trim()
+    if (name && nameContainsForbiddenDraftSubstring(name)) {
+      setError('Project name cannot contain the word “draft”.')
+      return
+    }
     setProjectNameSaving(true)
     setError(null)
     const { error: err } = await supabase
@@ -545,22 +550,83 @@ export function AdminQuestsPanel() {
   }, [rows, editingId])
 
   async function setProjectPublishState(camp: string, publish: boolean) {
+    const verb = publish ? 'publish' : 'unpublish'
+    const now = new Date().toISOString()
+
     if (!hasCampaignSchema) {
-      setError('Project-wide publish requires the campaign/branching migration.')
+      // Legacy DB has no campaign_slug — UI groups everything under "default"; bulk applies to all non-archived quests.
+      if (camp !== 'default') return
+      const ok = window.confirm(
+        `This database has no project/campaign columns yet.\n\n` +
+          `This will ${verb} every non-archived quest in the database (there is only one inventory).\n\n` +
+          (publish
+            ? `Quests without a start time get starts_at set to now; existing start times are kept.\n\n`
+            : '') +
+          `Proceed?`,
+      )
+      if (!ok) return
+
+      setProjectBulkBusy((prev) => ({ ...prev, [camp]: true }))
+      setError(null)
+
+      if (publish) {
+        const { error: stampErr } = await supabase
+          .from('quests')
+          .update({ starts_at: now, updated_at: now })
+          .eq('archived', false)
+          .is('starts_at', null)
+
+        if (stampErr) {
+          setProjectBulkBusy((prev) => ({ ...prev, [camp]: false }))
+          setError(stampErr.message)
+          return
+        }
+      }
+
+      const { error: err } = await supabase
+        .from('quests')
+        .update({ is_published: publish, updated_at: now })
+        .eq('archived', false)
+
+      setProjectBulkBusy((prev) => ({ ...prev, [camp]: false }))
+
+      if (err) {
+        setError(err.message)
+        return
+      }
+
+      await loadRows()
       return
     }
-    const verb = publish ? 'publish' : 'unpublish'
+
     const ok = window.confirm(
-      `This will ${verb} all non-archived quests in “${camp}”.\n\nProceed?`,
+      `This will ${verb} all non-archived quests in “${camp}”.\n\n` +
+        (publish ? `Quests without a start time get starts_at set to now; existing start times are kept.\n\n` : '') +
+        `Proceed?`,
     )
     if (!ok) return
 
     setProjectBulkBusy((prev) => ({ ...prev, [camp]: true }))
     setError(null)
 
+    if (publish) {
+      const { error: stampErr } = await supabase
+        .from('quests')
+        .update({ starts_at: now, updated_at: now })
+        .eq('campaign_slug', camp)
+        .eq('archived', false)
+        .is('starts_at', null)
+
+      if (stampErr) {
+        setProjectBulkBusy((prev) => ({ ...prev, [camp]: false }))
+        setError(stampErr.message)
+        return
+      }
+    }
+
     const { error: err } = await supabase
       .from('quests')
-      .update({ is_published: publish, updated_at: new Date().toISOString() })
+      .update({ is_published: publish, updated_at: now })
       .eq('campaign_slug', camp)
       .eq('archived', false)
 
@@ -771,6 +837,21 @@ export function AdminQuestsPanel() {
       return
     }
 
+    if (nameContainsForbiddenDraftSubstring(titleClean)) {
+      setError('Quest title cannot contain the word “draft”.')
+      setSaving(false)
+      return
+    }
+
+    if (hasCampaignSchema) {
+      const display = campaignDisplayName.trim()
+      if (display && nameContainsForbiddenDraftSubstring(display)) {
+        setError('Project display name cannot contain the word “draft”.')
+        setSaving(false)
+        return
+      }
+    }
+
     const startsIso = toIsoFromLocal(startsAt)
     const endsIso = endsAt.trim() ? toIsoFromLocal(endsAt) : null
 
@@ -882,8 +963,7 @@ export function AdminQuestsPanel() {
           <p className="admin-quests-kicker mono small muted">Operations</p>
           <h2 className="admin-quests-title">Quest control</h2>
           <p className="admin-quests-lede muted small">
-            Browse dossiers by project and lifecycle, then edit content in the studio panel. Filters apply to the list
-            only — nothing is deleted until you delete.
+            Open a project below, tap a dossier to edit. Filters only narrow the list — nothing deletes until you delete.
           </p>
         </div>
         <div className="admin-quests-hero-actions">
@@ -915,7 +995,9 @@ export function AdminQuestsPanel() {
         <p className="admin-quests-migrate mono small muted" role="status">
           Branching columns are not in the database yet. Run migration{' '}
           <code className="mono">supabase/migrations/20260420000000_campaign_branching.sql</code> in the Supabase SQL
-          Editor, then refresh. Drafts load in legacy mode; saves work without campaign fields.
+          Editor, then refresh. Drafts load in legacy mode; saves work without campaign fields. You can still use{' '}
+          <span className="accent-strong">Publish all</span> / <span className="accent-strong">Unpublish all</span> on the
+          project row for every non-archived quest.
         </p>
       ) : null}
 
@@ -1008,7 +1090,7 @@ export function AdminQuestsPanel() {
         <aside className="admin-list admin-quests-sidebar" aria-label="Quest list">
           <div className="admin-list-heading admin-quests-sidebar-head">
             <h2 className="admin-quests-sidebar-title mono small">Dossier inventory</h2>
-            <p className="admin-list-legend mono small muted">
+            <p className="admin-list-legend mono small muted admin-list-legend--desktop">
               Each project groups chapters. Status reflects{' '}
               <span className="admin-list-legend-strong">publish · schedule · archive</span>, not the title alone.
             </p>
@@ -1028,6 +1110,7 @@ export function AdminQuestsPanel() {
                 return (
                   <div key={camp} className="admin-campaign-group">
                     <div className="admin-campaign-group-header">
+                      <div className="admin-project-header-primary">
                       <button
                         type="button"
                         className="admin-project-caret-btn mono small"
@@ -1127,26 +1210,16 @@ export function AdminQuestsPanel() {
                           </span>
                         </div>
                       )}
-                      <button
-                        type="button"
-                        className="ghost-btn mono small admin-project-download"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          downloadProjectJson(camp)
-                        }}
-                        title="Download this project: all quests (including archived if any), full body JSON and branching fields"
-                      >
-                        JSON
-                      </button>
-                      <div className="admin-project-settings">
+                      </div>
+                      <div className="admin-project-header-publish">
                         <button
                           type="button"
-                          className="ghost-btn mono small admin-project-setting-btn"
-                          disabled={!hasCampaignSchema || projectBulkBusy[camp] === true}
+                          className="primary-btn mono admin-project-publish-all"
+                          disabled={projectBulkBusy[camp] === true}
                           title={
                             hasCampaignSchema
-                              ? 'Publish all non-archived quests in this project'
-                              : 'Requires campaign/branching migration'
+                              ? 'Publish all non-archived quests in this project. If a quest has no start time, it is set to now.'
+                              : 'Publish all non-archived quests (entire database — no per-project columns yet). If a quest has no start time, it is set to now.'
                           }
                           onClick={(e) => {
                             e.stopPropagation()
@@ -1157,12 +1230,12 @@ export function AdminQuestsPanel() {
                         </button>
                         <button
                           type="button"
-                          className="ghost-btn mono small admin-project-setting-btn"
-                          disabled={!hasCampaignSchema || projectBulkBusy[camp] === true}
+                          className="ghost-btn mono admin-project-unpublish-all"
+                          disabled={projectBulkBusy[camp] === true}
                           title={
                             hasCampaignSchema
                               ? 'Unpublish all non-archived quests in this project'
-                              : 'Requires campaign/branching migration'
+                              : 'Unpublish all non-archived quests (entire database — no per-project columns yet)'
                           }
                           onClick={(e) => {
                             e.stopPropagation()
@@ -1171,22 +1244,41 @@ export function AdminQuestsPanel() {
                         >
                           {projectBulkBusy[camp] ? '…' : 'Unpublish all'}
                         </button>
-                        <button
-                          type="button"
-                          className="ghost-btn mono small admin-project-setting-btn admin-project-setting-btn--danger"
-                          disabled={!hasCampaignSchema || projectBulkBusy[camp] === true}
-                          title={
-                            hasCampaignSchema
-                              ? 'Delete all player progress for this project so everyone must replay from scratch'
-                              : 'Requires campaign/branching migration'
-                          }
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            void resetCampaignPlayerProgress(camp)
-                          }}
+                        <details
+                          className="admin-project-more"
+                          onClick={(e) => e.stopPropagation()}
                         >
-                          {projectBulkBusy[camp] ? '…' : 'Reset progress'}
-                        </button>
+                          <summary className="mono small admin-project-more-summary">More for this project</summary>
+                          <div className="admin-project-more-body">
+                            <button
+                              type="button"
+                              className="ghost-btn mono small admin-project-json"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                downloadProjectJson(camp)
+                              }}
+                              title="All quests in this project (including archived), full JSON"
+                            >
+                              Download JSON export
+                            </button>
+                            <button
+                              type="button"
+                              className="ghost-btn mono small admin-project-setting-btn admin-project-setting-btn--danger"
+                              disabled={!hasCampaignSchema || projectBulkBusy[camp] === true}
+                              title={
+                                hasCampaignSchema
+                                  ? 'Delete all player progress for this project — everyone replays from scratch'
+                                  : 'Requires campaign/branching migration'
+                              }
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                void resetCampaignPlayerProgress(camp)
+                              }}
+                            >
+                              {projectBulkBusy[camp] ? '…' : 'Reset all player progress'}
+                            </button>
+                          </div>
+                        </details>
                       </div>
                     </div>
                     {isOpen ? (
@@ -1247,23 +1339,15 @@ export function AdminQuestsPanel() {
           {!editingId ? (
             <div className="admin-quests-studio-hint" role="region" aria-label="Studio">
               <p className="mono small admin-quests-studio-kicker muted">Studio</p>
-              <p className="admin-quests-studio-title">Compose or edit a dossier</p>
-              <ol className="admin-quests-studio-steps mono small muted">
-                <li>
-                  <span className="accent-strong">1</span> Pick a quest in the inventory, or start with{' '}
-                  <button type="button" className="admin-quests-inline-link" onClick={() => resetForm()}>
-                    New dossier
-                  </button>
-                  .
-                </li>
-                <li>
-                  <span className="accent-strong">2</span> Work across Basics → Campaign → Story → Player UI — one save
-                  writes all tabs.
-                </li>
-                <li>
-                  <span className="accent-strong">3</span> Publish and schedule when the narrative is ready for hunters.
-                </li>
-              </ol>
+              <p className="admin-quests-studio-title">Edit a dossier</p>
+              <p className="muted small admin-quests-studio-lede">
+                Tap a row in the list, or{' '}
+                <button type="button" className="admin-quests-inline-link" onClick={() => resetForm()}>
+                  New dossier
+                </button>
+                . Use the tabs below when editing — <span className="mono">Save dossier</span> stores everything at once.
+                To ship a whole project, use <span className="accent-strong">Publish all</span> under that project.
+              </p>
             </div>
           ) : null}
 
@@ -1277,28 +1361,41 @@ export function AdminQuestsPanel() {
                   </button>
                 ) : null}
                 <h2 className="admin-editor-title mono small muted">
-                {editingId ? `Edit · ${editingId.slice(0, 8)}…` : 'Create dossier'}
-              </h2>
+                  {editingId ? title.trim() || slug.trim() || 'Edit dossier' : 'Create dossier'}
+                </h2>
+                {editingId ? (
+                  <p className="muted small admin-editor-title-id mono">
+                    {slug.trim() ? (
+                      <>
+                        <span className="accent-strong">{slug}</span>
+                        <span className="muted"> · </span>
+                      </>
+                    ) : null}
+                    <span className="muted">id {editingId.slice(0, 8)}…</span>
+                  </p>
+                ) : null}
               </div>
               <nav className="admin-editor-tabs" role="tablist" aria-label="Quest editor">
                 {(
                   [
-                    ['basics', 'Basics'],
-                    ['campaign', 'Campaign'],
-                    ['story', 'Story & puzzles'],
-                    ['playerUi', 'Player UI'],
+                    ['basics', 'Basics', 'Basic'],
+                    ['campaign', 'Campaign', 'Arc'],
+                    ['story', 'Story & puzzles', 'Story'],
+                    ['playerUi', 'Player UI', 'UI'],
                   ] as const
-                ).map(([id, label]) => (
+                ).map(([id, label, short]) => (
                   <button
                     key={id}
                     type="button"
                     role="tab"
                     aria-selected={editorTab === id}
+                    aria-label={label}
                     id={`editor-tab-${id}`}
                     className={`admin-editor-tab mono small ${editorTab === id ? 'active' : ''}`}
                     onClick={() => setEditorTab(id)}
                   >
-                    {label}
+                    <span className="admin-editor-tab-long">{label}</span>
+                    <span className="admin-editor-tab-short">{short}</span>
                   </button>
                 ))}
               </nav>

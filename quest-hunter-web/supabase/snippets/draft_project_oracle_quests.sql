@@ -8,14 +8,14 @@ insert into public.quests (slug, title, body, is_published, archived)
 values
   (
     'oracle-01-lek',
-    'PROJECT ORACLE — Quest 1 — Het lek (draft)',
+    'PROJECT ORACLE — Quest 1 — Het lek',
     $json$
 {
   "intro": "PROJECT ORACLE — Hoofdstuk 1 — Het lek\n\nDit is je materiaal: een corrupt incidentfragment uit ORACLE’s buffer — geen aparte tekst erbuiten. Alles wat je nodig hebt staat in het blok hieronder.\n\n```\nINCIDENTNOTE v0.7 | integrity: DEGRADED\nSUBJECT_CODE: 12–5–14–1   (decode: A=1, B=2, … Z=26; lees de parels op volgorde)\nTIMELINE: tick₁ = 23:20   tick₂ = 23:30   tick₃ = ?\nREGEL: Δ tussen opeenvolgende ticks is constant (+10 min ten opzichte van de vorige).\nZONE_TOKEN: herschik P R A K tot één woord — een typische openbare groene plek in een stad (Engels, 4 letters).\n```\n\nORACLE lekt precies genoeg om te laten zien dat reconstructie mogelijk is — nog niet waarom dit dossier jouw naam zal raken.\n\nReconstrueer wie (voornaam), wanneer (tick₃), waar (zone). Elk antwoord gebruik je mentaal opnieuw in het slot.",
   "puzzles": [
     {
       "id": "q1-naam",
-      "prompt": "PUZZLE 1 — SUBJECT_CODE\n\nContext: de subjectcode staat als parels gescheiden door lange tréma’s — geen rekenmachine, alleen het alfabet.\n\nOpdracht: decodeer **12–5–14–1** met A=1 … Z=26. Één woord: de voornaam (hoofdletters).",
+      "prompt": "PUZZLE 1 — SUBJECT_CODE\n\nContext: de subjectcode staat als parels gescheiden door lange en-strepen — geen rekenmachine, alleen het alfabet.\n\nOpdracht: decodeer **12–5–14–1** met A=1 … Z=26. Één woord: de voornaam (hoofdletters).",
       "hints": [
         "Richting: alle signalen voor de naam zitten alleen in het veld SUBJECT_CODE bovenin het incidentblok.",
         "Mechaniek: A1Z26 — elk getal mapt naar precies één hoofdletter, in de volgorde van de parels.",
@@ -32,7 +32,7 @@ values
       "hints": [
         "Richting: gebruik alleen tick₁ en tick₂ uit het geblokkeerde fragment — geen andere bron.",
         "Mechaniek: het verschil in minuten tussen opeenvolgende ticks blijft constant; herhaal datzelfde verschil vanaf tick₂.",
-        "Startpunt: trek van 23:30 hetzelfde offset als tussen 23:20 en 23:30."
+        "Startpunt: werk het interval tussen tick₁ en tick₂ één keer door naar het volgende tijdstip na tick₂."
       ],
       "wrongFeedback": "De cadans klopt bijna — controleer of je hetzelfde minutenverschil toepast op de laatste stap.",
       "answer": "23:40",
@@ -45,7 +45,7 @@ values
       "hints": [
         "Richting: je zoekt één woord uit precies deze vier letters, elk een keer gebruikt.",
         "Mechaniek: anagram — alleen herschikken; er is geen tweede decode-stap.",
-        "Startpunt: het Engelse woord beschrijft waar mensen tussen gebouwen op gras zitten — vier letters."
+        "Startpunt: denk aan een compact Engels woord voor een typische buitenruimte in een stad — geen straatnaam."
       ],
       "wrongFeedback": "De letters kloppen als set — herschikken tot een woord dat letterlijk ‘open groen’ in de stad suggereert.",
       "answer": "PARK",
@@ -66,7 +66,7 @@ $json$::jsonb,
   ),
   (
     'oracle-03a-control',
-    'PROJECT ORACLE — Quest 3A — CONTROL (draft)',
+    'PROJECT ORACLE — Quest 3A — CONTROL',
     $json$
 {
   "intro": "Quest 3A — CONTROL — mirror buffer.\n\nJe probeert het eerste incident te stoppen. De buffer spiegelt je dossier met een andere encoding — ORACLE verschuift mee met wat je probeert te breken.\n\n```\nBUFFER excerpt (ARC-7):\nPRIMARY_ID rot13: ZNEPB\nANCHOR_STRING (7 letters, elke letter 1×): NITASOT\nCLOCK: 23:40 → 23:50 → 00:00 → ?   (+10 min per stap; middernacht = 00:00)\n```\n\nAls ORACLE alleen verschuift wat jij probeert te breken — wat blijft er dan over?",
@@ -86,7 +86,7 @@ $json$::jsonb,
     },
     {
       "id": "q3a-p2",
-      "prompt": "PUZZLE 2 — ANCHOR\n\nContext: ANCHOR_STRING is één veelvoorkomend woord voor een drukke openbare plek — Engels, zeven letters.\n\nOpdracht: herord **NITASOT** tot dat woord (hoofdletters).",
+      "prompt": "PUZZLE 2 — ANCHOR\n\nContext: ANCHOR_STRING is één veelvoorkomend woord voor een drukke openbare plek — Engels, zeven letters.\n\nOpdracht: herschik **NITASOT** tot dat woord (hoofdletters).",
       "hints": [
         "Richting: het is een plek waar routes en mensen samenkomen — geen abstract begrip.",
         "Mechaniek: anagram — zeven letters, elk exact één keer.",
@@ -124,7 +124,7 @@ $json$::jsonb,
   ),
   (
     'oracle-03b-observe',
-    'PROJECT ORACLE — Quest 3B — OBSERVE (draft)',
+    'PROJECT ORACLE — Quest 3B — OBSERVE',
     $json$
 {
   "intro": "Quest 3B — OBSERVE.\n\nJe grijpt niet in — dus zie je hoe ORACLE varianten naast elkaar zet.\n\nLegenda:\n- **Canon** = exact wat Quest 1 uit het lek haalde: **23:40 · PARK · LENA**\n- **Variant** = hetzelfde skelet, ander veld ingevuld\n\n```\nRij A: 23:40 | PARK | LENA\nRij B: 23:45 | PARK | LENA\nRij C: 23:40 | STATION | LENA\n```\n\nSlechts één rij is volledig canon.",
@@ -145,11 +145,11 @@ $json$::jsonb,
     },
     {
       "id": "q3b-p2",
-      "prompt": "PUZZLE 2 — RIDDLE\n\nContext: de zin in het dossier contrasteert wat vastligt met wat verandert — zelfde ‘plek’, ander verschijnsel.\n\nOpdracht: vul in (Engels, 5 letters): ‘Same clock, same place — but another _____’\nTip bij vorm: E _ _ _ _",
+      "prompt": "PUZZLE 2 — RIDDLE\n\nContext: de zin in het dossier contrasteert wat vastligt met wat verandert — zelfde ‘plek’, ander verschijnsel.\n\nOpdracht: vul in (Engels, 5 letters): ‘Same clock, same place — but another _____’",
       "hints": [
         "Richting: het antwoord is geen naam of tijd — het beschrijft wat er anders kan gebeuren op dezelfde coördinaten.",
         "Mechaniek: één zelfstandig naamwoord dat ‘voorval’ of ‘optreden’ dekt.",
-        "Startpunt: begint met E en eindigt op T in het woord dat past op ‘what happens’."
+        "Startpunt: een gangbaar Engels woord voor ‘gebeurtenis’ op een vaste plek — geen naam van een persoon."
       ],
       "wrongFeedback": "De structuur van de zin wil een abstractum — iets dat op dezelfde plek opnieuw kan plaatsvinden.",
       "answer": "EVENT",
@@ -184,7 +184,7 @@ $json$::jsonb,
   ),
   (
     'oracle-03c-influence',
-    'PROJECT ORACLE — Quest 3C — INFLUENCE (draft)',
+    'PROJECT ORACLE — Quest 3C — INFLUENCE',
     $json$
 {
   "intro": "Quest 3C — INFLUENCE.\n\nJe gebruikt het lek als hefboom: je raakt **input** aan en leest **output** af.\n\nMini-spec (lees dit als contract, niet als rekenvoorbeeld):\n```\nf(input) → output\nAls je input verschuift met vector Δ, registreert de log een output-shift Δ²\n  (Δ = (+1 uur, −7 minuten) relatief ten opzichte van baseline 21:31)\n```\n\nBaseline in het dossier: **21:31**. Pas Δ toe in twee stappen: eerst het uur, dan de minuten — rond zoals een klok (geen datumrollen).\n\nDe uitkomst van die berekening is het antwoord voor puzzel 2 — die staat hier bewust **niet** in één zin geschreven, zodat je het zelf moet vastleggen.",
@@ -195,7 +195,7 @@ $json$::jsonb,
       "hints": [
         "Richting: zoek een woord dat staat tussen ruwe invoer en wat er uit het systeem komt.",
         "Mechaniek: het is een pipeline-term — niet ‘model’ of ‘buffer’, maar het tussenstation waar transformatie gebeurt.",
-        "Startpunt: denk aan een term uit software en fabrieken: waar input wordt omgezet naar output."
+        "Startpunt: zoek het standaard Engelse label voor de stap tussen ruwe invoer en uitvoer in een gegevens- of productiestroom — zeven letters."
       ],
       "wrongFeedback": "Het woord zit letterlijk in de eerste regel van de intro — een bekende 7-letter keten tussen input en output.",
       "answer": "PROCESS",
@@ -207,8 +207,8 @@ $json$::jsonb,
       "prompt": "PUZZLE 2 — TIME SHIFT\n\nContext: baseline **21:31**. Vector Δ = (+1 uur, −7 minuten). Pas Δ op de baseline toe in twee stappen; resultaat als **HH:MM**.\n\nOpdracht: noteer het resulterende tijdstip.",
       "hints": [
         "Richting: gebruik alleen baseline + Δ — geen extra offsets uit de rest van de tekst.",
-        "Mechaniek: eerst +1 uur op 21:31, daarna −7 minuten op dat tussenresultaat.",
-        "Startpunt: na de uursprong hou je nog één aftrek voor minuten — uitkomst als HH:MM."
+        "Mechaniek: pas Δ in twee schijven toe op de klok (uur, dan minuten) zonder datum te rollen.",
+        "Startpunt: controleer vooral dat minuten na +1 uur nog netjes binnen het uur blijven voor je de minuutcorrectie doet."
       ],
       "wrongFeedback": "De delta is klein na de uursprong — controleer vooral de minuut-stap na 22:31.",
       "answer": "22:24",
@@ -217,7 +217,7 @@ $json$::jsonb,
     },
     {
       "id": "q3c-p3",
-      "prompt": "PUZZLE 3 — AIM\n\nContext: wanneer je het systeem stuur, spreek je een doel aan — niet de hele keten.\n\nOpdracht: anagram (Engels, 6 letters): **T E G R A T** — het woord voor wat je kiest om te richten (hoofdletters).",
+      "prompt": "PUZZLE 3 — AIM\n\nContext: wanneer je het systeem stuurt, spreek je een doel aan — niet de hele keten.\n\nOpdracht: anagram (Engels, 6 letters): **T E G R A T** — het woord voor wat je kiest om te richten (hoofdletters).",
       "hints": [
         "Richting: het woord beschrijft je doelvector in besturing, geen emotie.",
         "Mechaniek: anagram van zes letters; geen dubbele betekenis nodig.",

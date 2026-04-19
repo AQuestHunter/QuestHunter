@@ -357,11 +357,11 @@ begin
   hints_used_obj := coalesce(state -> 'hintsUsed', '{}'::jsonb)
     || jsonb_build_object(p_puzzle_id, new_used);
 
-  update public.user_quest_progress
-     set state = jsonb_set(state, '{hintsUsed}', hints_used_obj, true),
+  update public.user_quest_progress u
+     set state = jsonb_set(u.state, '{hintsUsed}', hints_used_obj, true),
          updated_at = now()
-   where user_id = uid
-     and quest_id = p_quest_id;
+   where u.user_id = uid
+     and u.quest_id = p_quest_id;
 
   xp_base := coalesce(nullif(elem ->> 'xp', '')::int, 25);
   xp_proj := greatest(1, floor(xp_base * public.quest_xp_hint_factor(new_used)));
@@ -542,17 +542,17 @@ begin
 
   if norm_attempt is distinct from expected then
     wrong_new := wrong_prev + 1;
-    update public.user_quest_progress
+    update public.user_quest_progress u
        set state = jsonb_set(
-             coalesce(state, '{}'::jsonb),
+             coalesce(u.state, '{}'::jsonb),
              '{wrongAttempts}',
-             coalesce(state -> 'wrongAttempts', '{}'::jsonb)
+             coalesce(u.state -> 'wrongAttempts', '{}'::jsonb)
                || jsonb_build_object(p_puzzle_id, wrong_new),
              true
            ),
            updated_at = now()
-     where user_id = uid
-       and quest_id = p_quest_id;
+     where u.user_id = uid
+       and u.quest_id = p_quest_id;
 
     update public.profiles as p
        set lives = p.lives - 1,
@@ -611,13 +611,13 @@ begin
   hints_used_clean := coalesce(state -> 'hintsUsed', '{}'::jsonb) - p_puzzle_id;
   wrong_used_clean := coalesce(state -> 'wrongAttempts', '{}'::jsonb) - p_puzzle_id;
 
-  update public.user_quest_progress
-     set step = step + 1,
+  update public.user_quest_progress u
+     set step = u.step + 1,
          updated_at = now(),
          state =
            jsonb_set(
              jsonb_set(
-               coalesce(state, '{}'::jsonb),
+               coalesce(u.state, '{}'::jsonb),
                '{hintsUsed}',
                hints_used_clean,
                true
@@ -627,8 +627,8 @@ begin
              true
            )
            || jsonb_build_object(elem ->> 'id', true)
-   where user_id = uid
-     and quest_id = p_quest_id;
+   where u.user_id = uid
+     and u.quest_id = p_quest_id;
 
   perform public.award_profile_xp(uid, xp_piece);
 

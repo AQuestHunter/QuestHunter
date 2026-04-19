@@ -30,38 +30,12 @@ export function AppLayout() {
   const navClass = ({ isActive }: { isActive: boolean }) =>
     isActive ? 'mono nav-sheet-link nav-sheet-link--active' : 'mono nav-sheet-link'
 
-  const navDesktopClass = ({ isActive }: { isActive: boolean }) =>
-    isActive ? 'mono active' : 'mono'
-
   return (
     <div className="shell">
       <header className="top-bar">
         <NavLink to="/quests" className="brand mono" onClick={closeMenu}>
           QUEST HUNTER
         </NavLink>
-
-        <nav className="nav-links nav-links--desktop mono" aria-label="Main">
-          <NavLink to="/quests" end className={navDesktopClass}>
-            Quests
-          </NavLink>
-          <NavLink to="/profile" className={navDesktopClass}>
-            Profile
-          </NavLink>
-          {isAdmin ? (
-            <NavLink to="/admin" className={navDesktopClass}>
-              Admin
-            </NavLink>
-          ) : null}
-        </nav>
-
-        <div className="top-bar-actions top-bar-actions--desktop">
-          <span className="top-bar-display mono" title={displayName || user?.email || ''}>
-            {displayName || '—'}
-          </span>
-          <button type="button" className="ghost-btn mono" onClick={() => void signOut()}>
-            Sign out
-          </button>
-        </div>
 
         <button
           type="button"
@@ -90,6 +64,9 @@ export function AppLayout() {
             <nav className="nav-sheet-inner mono">
               <NavLink to="/quests" end className={navClass} onClick={closeMenu}>
                 Quests
+              </NavLink>
+              <NavLink to="/leaderboard" className={navClass} onClick={closeMenu}>
+                Leaderboard
               </NavLink>
               <NavLink to="/profile" className={navClass} onClick={closeMenu}>
                 Profile

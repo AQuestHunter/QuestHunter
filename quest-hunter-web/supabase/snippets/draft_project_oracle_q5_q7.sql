@@ -5,7 +5,7 @@ insert into public.quests (slug, title, body, is_published, archived)
 values
   (
     'oracle-05a-control',
-    'PROJECT ORACLE — Quest 5A — CONTROL (draft)',
+    'PROJECT ORACLE — Quest 5A — CONTROL',
     $json$
 {
   "intro": "Quest 5 — branch: CONTROL.\n\nThree incidents nest in the same clock hour but at different map points. The screen raises `resolve_conflict=true`.\n\nThe risk logbook uses **EXPOSURE** for exposure severity.\n\nFirst minimise the point with the highest **risk_vector** in the legend:\n→ points **A**, **B**, **C** have vectors **3**, **5**, **4** — highest is **B** (value **5**).\n\nLocked accounts often end in a **LOCKOUT**.",
@@ -44,7 +44,7 @@ $json$::jsonb,
   ),
   (
     'oracle-05b-observe',
-    'PROJECT ORACLE — Quest 5B — OBSERVE (draft)',
+    'PROJECT ORACLE — Quest 5B — OBSERVE',
     $json$
 {
   "intro": "Quest 5 — branch: OBSERVE.\n\nTimeline with fixed cadence across **midnight**:\nIncident **A**: **23:40**\nIncident **B**: **A + 12 min**\nIncident **C**: **B + 18 min**\n\nORACLE defines an observer as someone who does not intervene — your role string is **`OBSERVER`**.",
@@ -83,7 +83,7 @@ $json$::jsonb,
   ),
   (
     'oracle-05c-influence',
-    'PROJECT ORACLE — Quest 5C — INFLUENCE (draft)',
+    'PROJECT ORACLE — Quest 5C — INFLUENCE',
     $json$
 {
   "intro": "Quest 5 — branch: INFLUENCE.\n\nYou shift one log by **+9 min**. Then two logs match exactly.\n\nYou call that an **ECHO** — the **SCRIPT** stays the same; only your shift repeats as a signature.\n\nTo prove it you also note **ECHO** under ROT13 → **RPUB** (decode check).\n\nShift-chain start in this dossier: **23:52**. **+9 minutes** ⇒ **24:01** ⇒ write as **00:01**.",
@@ -122,7 +122,7 @@ $json$::jsonb,
   ),
   (
     'oracle-07a-control',
-    'PROJECT ORACLE — Quest 7A — CONTROL (draft)',
+    'PROJECT ORACLE — Quest 7A — CONTROL',
     $json$
 {
   "intro": "Quest 7 — branch: CONTROL.\n\nYou force:\n```\nprediction_source = internal\n```\nThe separator in dumps is **`|`** (ASCII name **PIPE**).\n\nThen you apply a **LOCK** to this branch.",
@@ -161,7 +161,7 @@ $json$::jsonb,
   ),
   (
     'oracle-07b-observe',
-    'PROJECT ORACLE — Quest 7B — OBSERVE (draft)',
+    'PROJECT ORACLE — Quest 7B — OBSERVE',
     $json$
 {
   "intro": "Quest 7 — branch: OBSERVE.\n\nYou compare **forecast** (ahead) with **post-hoc** (after the fact).\n\nAcronym drill: first letters of **Forecast Risk Under Uncertainty** → **FRUU** (attention check only).\n\nIf labels are adjusted after the fact to save a score — is it still **accuracy**?",
@@ -201,7 +201,7 @@ $json$::jsonb,
   ),
   (
     'oracle-07c-influence',
-    'PROJECT ORACLE — Quest 7C — INFLUENCE (draft)',
+    'PROJECT ORACLE — Quest 7C — INFLUENCE',
     $json$
 {
   "intro": "Quest 7 — branch: INFLUENCE.\n\nYou simulate **external** behaviour while staying internal — an **OVERLAY** on your logs.\n\nIt is a **NESTED** experiment: a test inside a test.",

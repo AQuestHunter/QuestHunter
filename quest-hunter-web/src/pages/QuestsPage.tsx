@@ -1,7 +1,14 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { QuestRunner } from '../components/QuestRunner'
-import { fetchResolvedQuestSummary, getPlayerCampaignSlugFromEnv } from '../lib/questPlay'
+import {
+  fetchActivePlayerCampaigns,
+  fetchResolvedQuestSummary,
+  getPlayerCampaignSlugForPlay,
+  getPlayerCampaignSlugFromEnv,
+  setPlayerCampaignSlugPreference,
+  type ActivePlayerCampaign,
+} from '../lib/questPlay'
 import type { QuestSummary, ResolvedQuestStatus } from '../types/quest'
 import { useAuth } from '../contexts/AuthContext'
 
@@ -17,11 +24,34 @@ function resolvedMessage(status: ResolvedQuestStatus): string | null {
 
 export function QuestsPage() {
   const { profile } = useAuth()
-  const campaignSlug = getPlayerCampaignSlugFromEnv()
+  const [campaignSlug, setCampaignSlug] = useState(() => getPlayerCampaignSlugForPlay())
+  const [campaignChoices, setCampaignChoices] = useState<ActivePlayerCampaign[]>([])
   const [quest, setQuest] = useState<QuestSummary | null>(null)
   const [resolveStatus, setResolveStatus] = useState<ResolvedQuestStatus>('none')
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      const rows = await fetchActivePlayerCampaigns()
+      if (cancelled) return
+      setCampaignChoices(rows)
+      if (rows.length === 0) return
+
+      const valid = new Set(rows.map((r) => r.slug))
+      const pref = getPlayerCampaignSlugForPlay()
+      if (valid.has(pref)) return
+
+      const envSlug = getPlayerCampaignSlugFromEnv()
+      const fallback = valid.has(envSlug) ? envSlug : rows[0].slug
+      setPlayerCampaignSlugPreference(fallback)
+      setCampaignSlug(fallback)
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const loadQuest = useCallback(async () => {
     setLoading(true)
@@ -42,6 +72,12 @@ export function QuestsPage() {
     void loadQuest()
   }, [loadQuest])
 
+  const showProjectPicker = campaignChoices.length > 1
+  const singleProjectLabel = useMemo(() => {
+    if (campaignChoices.length !== 1) return null
+    return campaignChoices[0].label
+  }, [campaignChoices])
+
   const needsName = !profile?.hunter_name?.trim()
   const waitCopy = resolvedMessage(resolveStatus)
   const showIdleCard = !quest && !needsName && !message && !loading
@@ -53,15 +89,47 @@ export function QuestsPage() {
         <p className="mono hero-tag flicker">HET GEBROKEN SIGNAAL</p>
         <h1>Active dossier</h1>
         <p className="muted hero-sub">
-          One live operation at a time. Archives seal automatically after the window closes—then decay from the public
-          feed.
+          Pick a project when several are live; otherwise you see the dossier for your selected arc (or the newest
+          window globally when using the default campaign).
         </p>
-        {campaignSlug !== 'default' ? (
-          <p className="muted small mono">
-            Campaign: <span className="accent-strong">{campaignSlug}</span>
-          </p>
-        ) : null}
       </div>
+
+      {!needsName && showProjectPicker ? (
+        <label className="field quest-project-picker mono small">
+          <span className="label-text">Project</span>
+          <select
+            className="terminal-input mono quest-project-picker-select"
+            value={campaignSlug}
+            aria-label="Playable project"
+            onChange={(e) => {
+              const v = e.target.value
+              setPlayerCampaignSlugPreference(v)
+              setCampaignSlug(v)
+            }}
+          >
+            {campaignChoices.map((c) => (
+              <option key={c.slug} value={c.slug}>
+                {c.label}
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : null}
+
+      {!needsName && !showProjectPicker && singleProjectLabel ? (
+        <p className="muted small mono quest-project-single">
+          Project: <span className="accent-strong">{singleProjectLabel}</span>
+          {campaignSlug !== 'default' ? (
+            <span className="muted"> ({campaignSlug})</span>
+          ) : null}
+        </p>
+      ) : null}
+
+      {!needsName && campaignChoices.length === 0 && campaignSlug !== 'default' ? (
+        <p className="muted small mono">
+          Campaign: <span className="accent-strong">{campaignSlug}</span>
+        </p>
+      ) : null}
 
       {needsName ? (
         <article className="quest-card warn">
@@ -104,9 +172,9 @@ export function QuestsPage() {
               Publish a windowed quest in Admin (start ≤ now, end unset or future). Ensure migrations with RPCs are
               applied so answers stay server-side.
             </p>
-            <p className="muted small mono">
-              Branching campaigns: set Admin campaign fields + <code>VITE_QUEST_CAMPAIGN_SLUG</code> to match your story
-              slug.
+            <p className="muted small">
+              Use Admin to publish quests in their time window. With multiple live projects, a project picker appears
+              above; you can also pin a default via <code className="mono">VITE_QUEST_CAMPAIGN_SLUG</code> at build time.
             </p>
           </article>
         )
