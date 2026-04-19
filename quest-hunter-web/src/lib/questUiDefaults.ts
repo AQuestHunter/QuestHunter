@@ -7,6 +7,8 @@ export type QuestUiDraft = {
   loadingMessage: string
   challengeBadge: string
   hintLabel: string
+  hintRevealLabel: string
+  hintXpNote: string
   answerPlaceholder: string
   submitLabel: string
   submitBusyLabel: string
@@ -35,6 +37,11 @@ export type ResolvedQuestUi = {
   loadingMessage: string
   challengeBadge: string
   hintLabel: string
+  hintRevealLabel: string
+  hintXpNote: string
+  preFinaleBadge: string
+  preFinaleHeadline: string
+  preFinaleCta: string
   answerPlaceholder: string
   submitLabel: string
   submitBusyLabel: string
@@ -72,7 +79,13 @@ export const DEFAULT_QUEST_UI = {
   introCta: 'Enter operation',
   loadingMessage: 'Decrypting dossier…',
   challengeBadge: 'Challenge',
-  hintLabel: 'Hint',
+  hintLabel: 'Intel',
+  hintRevealLabel: 'Reveal next hint',
+  hintXpNote:
+    'Each revealed hint tier multiplies puzzle XP: tier 1 ×0.95, tier 2 ×0.90, tier 3 ×0.80 (cumulative).',
+  preFinaleBadge: 'Lock assembled',
+  preFinaleHeadline: 'What the pieces mean',
+  preFinaleCta: 'Continue to decision',
   answerPlaceholder: 'Your answer',
   submitLabel: 'Submit',
   submitBusyLabel: '…',
@@ -93,6 +106,8 @@ export function emptyUiDraft(): QuestUiDraft {
     loadingMessage: '',
     challengeBadge: '',
     hintLabel: '',
+    hintRevealLabel: '',
+    hintXpNote: '',
     answerPlaceholder: '',
     submitLabel: '',
     submitBusyLabel: '',
@@ -132,6 +147,8 @@ export function parseUiDraftFromBody(raw: unknown): QuestUiDraft {
   d.loadingMessage = str('loadingMessage')
   d.challengeBadge = str('challengeBadge')
   d.hintLabel = str('hintLabel')
+  d.hintRevealLabel = str('hintRevealLabel')
+  d.hintXpNote = str('hintXpNote')
   d.answerPlaceholder = str('answerPlaceholder')
   d.submitLabel = str('submitLabel')
   d.submitBusyLabel = str('submitBusyLabel')
@@ -202,11 +219,15 @@ export function compactUiDraft(draft: QuestUiDraft): QuestUiCopy | undefined {
   if (c) out.loadingMessage = c
   const d1 = w(draft.challengeBadge)
   const d2 = w(draft.hintLabel)
+  const d2b = w(draft.hintRevealLabel)
+  const d2c = w(draft.hintXpNote)
   const d3 = w(draft.answerPlaceholder)
   const d4 = w(draft.submitLabel)
   const d5 = w(draft.submitBusyLabel)
   if (d1) out.challengeBadge = d1
   if (d2) out.hintLabel = d2
+  if (d2b) out.hintRevealLabel = d2b
+  if (d2c) out.hintXpNote = d2c
   if (d3) out.answerPlaceholder = d3
   if (d4) out.submitLabel = d4
   if (d5) out.submitBusyLabel = d5
@@ -264,6 +285,11 @@ export function mergeQuestUi(ui?: QuestUiCopy | null): ResolvedQuestUi {
     loadingMessage: pick('loadingMessage', DEFAULT_QUEST_UI.loadingMessage),
     challengeBadge: pick('challengeBadge', DEFAULT_QUEST_UI.challengeBadge),
     hintLabel: pick('hintLabel', DEFAULT_QUEST_UI.hintLabel),
+    hintRevealLabel: pick('hintRevealLabel', DEFAULT_QUEST_UI.hintRevealLabel),
+    hintXpNote: pick('hintXpNote', DEFAULT_QUEST_UI.hintXpNote),
+    preFinaleBadge: pick('preFinaleBadge', DEFAULT_QUEST_UI.preFinaleBadge),
+    preFinaleHeadline: pick('preFinaleHeadline', DEFAULT_QUEST_UI.preFinaleHeadline),
+    preFinaleCta: pick('preFinaleCta', DEFAULT_QUEST_UI.preFinaleCta),
     answerPlaceholder: pick('answerPlaceholder', DEFAULT_QUEST_UI.answerPlaceholder),
     submitLabel: pick('submitLabel', DEFAULT_QUEST_UI.submitLabel),
     submitBusyLabel: pick('submitBusyLabel', DEFAULT_QUEST_UI.submitBusyLabel),

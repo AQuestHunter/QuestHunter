@@ -1,0 +1,911 @@
+
+🔥 QUEST HUNTER — COMPLETE RULESET
+
+
+⸻
+
+
+🧠 1. FUNDAMENTELE BASIS
+
+
+    Elke quest = één grote puzzel opgesplitst in delen
+    Elke vraag = onderdeel van een grotere sleutel
+    Geen losse vragen, alles hangt samen
+    Antwoorden blijven relevant tot het einde van de quest
+
+🔥 QUEST HUNTER — COMPLETE ARCHITECTUUR (HERWERKT)
+
+
+⸻
+
+
+🧠 1. HIËRARCHIE (DIT IS HEILIG)
+
+VERHAAL (macro)
+
+   ↓
+
+QUESTS (chapters)
+
+   ↓
+
+VRAGEN (puzzelonderdelen)
+
+
+⸻
+
+
+🔗 FUNDAMENTELE FLOW
+
+    Verhaal bepaalt richting
+    Quests vertalen verhaal naar situaties
+    Vragen breken de quest in oplosbare stukken
+
+👉 Alles stroomt naar beneden…
+👉 En informatie stroomt terug naar boven
+
+⸻👉 Informatie genereren voor het quest-slot
+
+
+🧩 2. STRUCTUUR VAN EEN VRAAG
+
+
+Elke vraag bevat:
+
+
+📍 Titel
+
+
+Kort, dreigend
+
+
+📖 Context
+
+
+    2–5 lijnen
+    bevat subtiele hints
+    ondersteunt de puzzel
+
+
+🧩 Challenge
+
+
+    visueel afgescheiden (codeblok / symbolen / afbeelding)
+    bevat de echte puzzel
+
+
+🎯 Input
+
+
+    duidelijk wat verwacht wordt (woord / code / cijfer / coördinaten)
+
+
+🧠 Hints
+
+
+    3 lagen (zie hint systeem)
+
+
+⸻
+
+
+🔧 3. VRAAG DESIGN REGELS
+
+
+    Vraag = probleem, geen directe vraagstelling
+    Bevat:
+        mechaniek
+        context
+        ruis (max 30%)
+    Dwingt interpretatie, geen herkenning
+    Gokken mag niet werken
+    Minstens 1–3 stappen afhankelijk van moeilijkheid
+
+
+⸻
+
+
+🧠 MECHANIEK SYSTEEM — COMPLETE SAMENVATTING
+
+🎯 FUNDAMENT
+
+Elke quest = combinatie van mechanics, geen losse puzzel.
+
+Minimaal per quest:
+
+    2 categorieën combineren
+    1 moment van twijfel
+    1 “aha” moment
+
+Anders is het gewoon huiswerk met cosplay.
+
+
+🔐 1. ENCODING (toegangspoort)
+
+Doel: info verbergen, niet oplossen.
+
+Voorbeelden:
+
+    Caesar, Vigenère, Morse, Binary, Base64
+    Atbash, Playfair, Rail Fence, Columnar
+    Hex, ASCII, Unicode
+
+Gebruik:
+
+    Layered (meerdere op elkaar)
+    Verstopte encoding (bv. in afbeelding)
+    Foute sleutel → plausibel fout antwoord
+
+👉 Encoding = slot, niet de puzzel zelf.
+
+
+🧩 2. LOGICA (structuur)
+
+Doel: denkwerk forceren.
+
+Voorbeelden:
+
+    Reeksen, patronen, matrix
+    Deductie (wie liegt)
+    Constraint puzzles
+
+Gebruik:
+
+    Regels veranderen
+    Meerdere mogelijke oplossingen
+    Context bepaalt juiste
+
+👉 Logica = twijfel creëren.
+
+
+🕵️ 3. CONTEXT-BASED (verhaal als mechanic)
+
+Doel: info verstoppen in narratief.
+
+Voorbeelden:
+
+    Datums = shifts
+    Namen = codes
+    Dialogen = hints
+
+Gebruik:
+
+    Onbetrouwbare info
+    Belangrijke details lijken irrelevant
+    Keuzes beïnvloeden interpretatie
+
+👉 Verhaal = actief onderdeel, geen decor.
+
+
+🌐 4. OSINT-FEEL (realiteit simuleren)
+
+Doel: immersion en “echtheid”.
+
+Voorbeelden:
+
+    Fake websites / profielen
+    Metadata (EXIF, timestamps)
+    Verborgen info in bestanden
+
+Gebruik:
+
+    Tegenstrijdige bronnen
+    Incomplete info
+    Cross-referencing nodig
+
+👉 Spel voelt groter dan zichzelf.
+
+
+🎭 5. MISLEIDING (essentieel)
+
+Doel: spelers laten falen… geloofwaardig.
+
+Voorbeelden:
+
+    Red herrings
+    Fake oplossingen
+    Dubbele betekenissen
+
+👉 Zonder dit = te makkelijk.
+
+
+🔗 6. MULTI-LAYER
+
+Doel: complexiteit opbouwen.
+
+Voorbeelden:
+
+    Output A → input B
+    Encoding + logica + context samen
+    Eén fout → alles fout
+
+👉 Hier ontstaat echte moeilijkheid.
+
+
+🧠 7. PSYCHOLOGISCH
+
+Doel: emotie + twijfel.
+
+Voorbeelden:
+
+    Schuldgevoel bij keuzes
+    Twijfel over juiste antwoord
+    Informatie achterhouden
+
+👉 Speler vecht tegen zichzelf.
+
+
+🧱 8. VISUEEL / FYSIEK
+
+Doel: andere denkkanalen activeren.
+
+Voorbeelden:
+
+    Afbeeldingen / blauwdrukken
+    Symbolen / posities
+    Kaarten
+
+👉 Perfect voor variatie.
+
+
+⏳ 9. TIJD / VOLGORDE
+
+Doel: druk en impact.
+
+Voorbeelden:
+
+    Volgorde bepaalt uitkomst
+    Te snel = penalty
+    Gefaseerde info
+
+👉 Stress = fouten.
+
+
+🧪 10. META / INTERFACE
+
+Doel: verwachtingen breken.
+
+Voorbeelden:
+
+    UI is deel van puzzel
+    Hidden clicks / scroll
+    “Foute” acties zijn juist
+
+👉 Spelers vertrouwen niets meer.
+
+
+⸻
+
+
+📎 IMPLEMENTATIE (ENGINE — quest-hunter-web)
+
+
+    Het product gebruikt XP als vaste punten op je profiel, met dezelfde bedoeling als de percentages hierboven:
+
+    Hintlagen: tier 1 ×0.95, tier 2 ×0.90, tier 3 ×0.80 (cumulatief op het basis-XP van de stap).
+
+    Foute pogingen op dezelfde stap: elk ×0.98 extra op het toe te kennen XP (stacking).
+
+    Clean solve: +5% als er geen hints zijn gebruikt én geen foute pogingen op die stap.
+
+    Finale-paden: OBSERVE ×0.94, INFLUENCE ×1.00, CONTROL ×1.06 op basis-xpFinale (default 75).
+
+    Verborgen tellers: CONTROL / OBSERVE / INFLUENCE worden per gekozen finale opgeslagen in progress.state.hiddenAxes (voor latere branching).
+
+    Zie quest-hunter-web/docs/AUTHORING_CHECKLIST.md voor auteurs-checklist en QA.
+
+
+🗂️ 11. DATA CORRUPTIE
+
+Doel: chaos als puzzel.
+
+Voorbeelden:
+
+    Kapotte tekst
+    Overlapping data
+    Missing info
+
+👉 Lijkt random, is het niet.
+
+
+🔁 12. ITERATIE / FALEN
+
+Doel: leren via fouten.
+
+Voorbeelden:
+
+    Foute antwoorden geven hints
+    Meerdere pogingen nodig
+    XP-verlies (jouw systeem)
+
+👉 Falen wordt mechanic.
+
+
+🧍‍♂️ 13. ROLLEN / IDENTITEIT
+
+Doel: keuzes impact geven.
+
+Voorbeelden:
+
+    Verschillende info per rol
+    Andere oplossingen per pad
+
+👉 Replay value + diepgang.
+
+
+🧩 14. INCOMPLETE INFO
+
+Doel: onzekerheid.
+
+Voorbeelden:
+
+    Te weinig data
+    Interpretatie nodig
+    Meerdere plausibele antwoorden
+
+👉 Zekerheid wegnemen.
+
+
+🔐 15. RESOURCE MANAGEMENT
+
+Doel: spanning verhogen.
+
+Voorbeelden:
+
+    Beperkte pogingen
+    Hints kosten XP
+    Risico vs zekerheid
+
+👉 Beslissingen worden zwaar.
+
+
+🧠 16. PATTERN DISRUPTION
+
+Doel: vertrouwen breken.
+
+Voorbeelden:
+
+    Regel verandert plots
+    Bekend patroon faalt
+
+👉 Spelers worden paranoïde.
+
+
+🔗 17. CROSS-QUEST LINKS
+
+Doel: één geheel maken.
+
+Voorbeelden:
+
+    Oude info opnieuw nodig
+    Verbinding tussen quests
+
+👉 Geen losse levels meer.
+
+
+🎧 18. MULTI-SENSORY
+
+Doel: onverwachte input.
+
+Voorbeelden:
+
+    Audio → code
+    Kleur → cijfers
+    Ritme → morse
+
+👉 Andere hersengebieden activeren.
+
+
+🧠 19. COGNITIVE BIAS
+
+Doel: speler manipuleren.
+
+Voorbeelden:
+
+    Voor de hand liggend = fout
+    Framing stuurt keuzes
+
+👉 Brein tegen zichzelf gebruiken.
+
+
+🧪 20. FALSE MASTERY
+
+Doel: overconfidence straffen.
+
+Voorbeelden:
+
+    Lijkt hetzelfde → is anders
+    Speler denkt het te snappen
+
+👉 Valstrik voor slimme mensen.
+
+🎯 21. ANTWOORD REGELS
+
+
+    1 exact correct antwoord
+    Geen interpretatie
+    Case consistent (bij voorkeur lowercase) maar niet hoofdletter gevoelig
+    Geen gokken mogelijk
+    Antwoord voelt “verdiend”
+
+
+⸻
+
+
+🔤 22. ANTWOORD TYPES
+
+
+Variatie verplicht:
+
+
+    woorden
+    cijfers
+    codes
+    coördinaten
+    fragments
+    multiple choice
+
+
+Speler weet WAT, niet HOE
+
+
+⸻
+
+
+🔄 23. DOORLOPENDE OUTPUT
+
+
+Elke vraag levert iets op dat later nodig is:
+
+
+    letters → woord
+    cijfers → code
+    sleutelstukken → cipher
+    info → interpretatie
+
+
+⸻
+
+
+🔐 24. EINDE VAN DE QUEST (DE LOCK)
+
+
+    Combineert alle vorige outputs
+    Vereist interpretatie
+    Niet gewoon samenvoegen
+    Mag extra twist bevatten (volgorde, betekenis)
+
+
+⸻
+
+
+📖 25. VERHAAL ALS MECHANIEK
+
+
+    Verhaal is functioneel, geen decoratie
+    Bevat hints en richting
+    Kan oplossingen beïnvloeden (bv. reverse)
+
+
+⸻
+
+
+🧠 26. HINT SYSTEM
+	
+
+3 lagen:
+
+
+🟢 Hint 1
+
+
+richting
+
+
+🟡 Hint 2
+
+
+mechaniek
+
+
+🔴 Hint 3
+
+
+startpunt oplossing
+
+
+⸻
+
+
+💀 Hint regels:
+
+
+    geen directe antwoorden
+    elke hint kost XP
+    progressieve kost:
+        H1: -5%
+        H2: -10%
+        H3: -20%
+
+
+⸻
+
+
+⚙️ 27. XP SYSTEM
+
+
+    Fout antwoord: -2% (stacking)
+    Hints: extra verlies
+    Perfect run: bonus
+    Geen hints: multiplier
+
+
+⸻
+
+
+🧠 28. MOEILIJKHEID ESCALATIE
+
+
+Quest 1–2
+
+
+    1 laag
+    duidelijke richting
+
+
+Quest 3–5
+
+
+    2 lagen
+    eerste misleiding
+
+
+Quest 6–8
+
+
+    3 lagen
+    combinaties
+
+
+Quest 9–10
+
+
+    alles gecombineerd
+
+
+⸻
+
+
+⚖️ 29. KEUZE SYSTEM (NA ELKE QUEST)
+
+📖 OUTPUT VAN HET SLOT
+
+Bestaat uit:
+
+1. Antwoord (mechanisch)
+
+bv. PROJECT VIREX
+
+
+⸻
+
+
+2. Betekenis (narratief)
+
+“Dit project is al actief.”
+
+
+⸻
+
+
+👉 Dit is de brug naar het verhaal
+
+
+⸻
+
+
+🔁 4. LINK NAAR HET VERHAAL
+
+Elke quest eindigt met:
+
+👉 nieuwe informatie over de grotere waarheid
+
+
+⸻
+
+
+REGELS
+
+    Slot = clue, geen volledige uitleg
+    Moet:
+        vragen oproepen
+        richting geven
+        onzekerheid creëren
+
+
+⸻
+
+
+VOORBEELD FLOW
+
+Quest 1:
+
+“VIREX bestaat”
+
+Quest 2:
+
+“VIREX is geen persoon”
+
+Quest 3:
+
+“VIREX is een systeem”
+
+👉 Verhaal groeit stap per stap
+
+
+⸻
+
+
+⚖️ 5. KEUZE SYSTEM (NA QUEST SLOT)
+
+🎯 DOEL
+
+Speler laat interpretatie + moraal zien
+
+
+⸻
+
+
+📖 STRUCTUUR
+
+1. Samenvatting
+
+wat ontdekt werd
+
+2. Implicatie
+
+waarom dit belangrijk is
+
+3. Beslissing
+
+
+⸻
+
+
+
+
+Na elke quest:
+
+
+⸻
+
+
+📖 Statement structuur
+
+
+    Samenvatting (wat ontdekt is)
+    Interpretatie (betekenis / dreiging)
+    Beslissing (keuze)
+
+
+⸻
+
+
+⚖️ Keuze opties (altijd 3)
+
+
+    Actief A ==> Evil keuze
+    Actief B ==> Good keuze
+    Passief ==> Neutraal/afzijdig
+
+
+⸻
+
+
+🔁 Types keuzes
+
+
+Macht
+
+
+(controleren / loslaten / negeren / beinvloeden)
+
+
+Moraliteit
+
+
+(redden / opofferen / niets doen )
+
+
+Intentie
+
+
+(helpen / saboteren / afzijdig)
+
+
+⸻
+
+
+🧠 30. KEUZE REGELS
+
+
+    Keuze is gebaseerd op puzzeloutput
+    Nooit random
+    Beide opties hebben nadelen
+    Geen “goede” keuze
+
+
+⸻
+
+
+🔁 31. CONSEQUENCES
+
+
+Keuzes beïnvloeden:
+
+
+    volgende quests
+    info kwaliteit
+    verhaallijn
+    einde
+
+
+⸻
+
+
+🧠 32. VERBORGEN SYSTEMEN
+
+
+Niet zichtbaar voor speler:
+
+
+    moraliteit score
+    controle vs passief
+    intentie
+
+
+Wordt gebruikt voor:
+
+
+    branching
+    info bias
+    moeilijkheid
+
+
+⸻
+
+
+🧠 33. INFO MANIPULATIE
+
+
+Keuzes beïnvloeden:
+
+
+    betrouwbaarheid van info
+    interpretatie van puzzels
+    narratieve waarheid
+
+
+⸻
+
+
+🧠 34. XP VS KEUZE BALANS
+
+
+Goede keuze
+
+
+    minder XP
+    meer duidelijkheid
+
+
+Slechte keuze
+
+
+    meer XP
+    meer chaos
+
+
+Neutraal
+
+
+    gemiddeld
+
+
+⸻
+
+
+🧠 35. FEEDBACK SYSTEM
+
+
+Na fout antwoord:
+
+
+Niet:
+
+
+fout
+
+
+Wel:
+
+
+    twijfel creëren
+    speler laten denken dat hij dichtbij zit
+
+
+⸻
+
+
+🧠 36. META-LAAG
+
+
+    vorige antwoorden keren terug
+    krijgen nieuwe betekenis
+    verbinden quests
+
+
+⸻
+
+
+🧠 37. CONSISTENTIE
+
+
+    zelfde logica’s terug laten komen
+    speler leert systeem begrijpen
+
+
+⸻
+
+
+🧠 38. FAIRNESS REGEL
+
+
+Als speler denkt:
+
+
+“dit is bullshit”
+
+
+→ fout ontwerp
+
+
+Als speler denkt:
+
+
+“ik zat ernaast”
+
+
+→ perfect
+
+
+⸻
+
+
+🧠 39. DESIGN TEST
+
+
+Elke puzzel moet:
+
+
+    oplosbaar zijn zonder hints
+    logisch blijven na tijd
+    niet afhankelijk zijn van toeval
+
+
+⸻
+
+
+🔥 DE ULTIEME REGEL
+
+
+Je maakt geen vragen.
+
+Je maakt een systeem waarin:
+
+
+    info = fragmentarisch
+    waarheid = onzeker
+    keuzes = consequenties
+    en spelers zichzelf beginnen wantrouwen
+

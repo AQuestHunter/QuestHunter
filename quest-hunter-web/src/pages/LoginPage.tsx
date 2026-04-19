@@ -16,6 +16,7 @@ export function LoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
+  const [signupAwaitingEmail, setSignupAwaitingEmail] = useState(false)
 
   if (!loading && session) {
     return <Navigate to={from} replace />
@@ -25,11 +26,26 @@ export function LoginPage() {
     e.preventDefault()
     setError(null)
     setPending(true)
-    const fn = mode === 'signin' ? signIn : signUp
-    const { error: err } = await fn(email.trim(), password)
+    if (mode === 'signin') {
+      const { error: err } = await signIn(email.trim(), password)
+      setPending(false)
+      if (err) {
+        setError(err.message)
+        return
+      }
+      navigate(from, { replace: true })
+      return
+    }
+
+    const { error: err, needsEmailConfirmation } = await signUp(email.trim(), password)
     setPending(false)
     if (err) {
       setError(err.message)
+      return
+    }
+    if (needsEmailConfirmation) {
+      setSignupAwaitingEmail(true)
+      setPassword('')
       return
     }
     navigate(from, { replace: true })
@@ -57,7 +73,11 @@ export function LoginPage() {
             role="tab"
             aria-selected={mode === 'signin'}
             className={mode === 'signin' ? 'tab active' : 'tab'}
-            onClick={() => setMode('signin')}
+            onClick={() => {
+              setMode('signin')
+              setSignupAwaitingEmail(false)
+              setError(null)
+            }}
           >
             Sign in
           </button>
@@ -66,12 +86,41 @@ export function LoginPage() {
             role="tab"
             aria-selected={mode === 'signup'}
             className={mode === 'signup' ? 'tab active' : 'tab'}
-            onClick={() => setMode('signup')}
+            onClick={() => {
+              setMode('signup')
+              setSignupAwaitingEmail(false)
+              setError(null)
+            }}
           >
             Sign up
           </button>
         </div>
 
+        {signupAwaitingEmail ? (
+          <div className="login-verify-notice mono small" role="status">
+            <p className="login-verify-title">Bevestig je e-mail</p>
+            <p className="muted login-verify-lede">
+              We hebben een link gestuurd naar <strong className="login-verify-email">{email.trim()}</strong>.
+              Open de link in die mail om je account te activeren. Daarna kun je hier inloggen.
+            </p>
+            <p className="muted login-verify-tip">
+              Zie je geen mail? Controleer je spam- of map Ongewenste e-mail; soms duurt het een paar minuten.
+            </p>
+            <button
+              type="button"
+              className="primary-btn mono login-submit"
+              onClick={() => {
+                setSignupAwaitingEmail(false)
+                setMode('signin')
+                setError(null)
+              }}
+            >
+              Terug naar inloggen
+            </button>
+          </div>
+        ) : null}
+
+        {!signupAwaitingEmail ? (
         <form className="stack-form login-form" onSubmit={(e) => void onSubmit(e)}>
           <label className="field">
             <span className="mono label-text">Email</span>
@@ -105,6 +154,7 @@ export function LoginPage() {
             {pending ? '…' : mode === 'signin' ? 'Enter channel' : 'Create account'}
           </button>
         </form>
+        ) : null}
       </div>
     </div>
   )

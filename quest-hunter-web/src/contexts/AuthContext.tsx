@@ -21,7 +21,10 @@ type AuthContextValue = {
   isAdmin: boolean
   refreshProfile: () => Promise<void>
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>
-  signUp: (email: string, password: string) => Promise<{ error: Error | null }>
+  signUp: (
+    email: string,
+    password: string,
+  ) => Promise<{ error: Error | null; needsEmailConfirmation: boolean }>
   signOut: () => Promise<void>
 }
 
@@ -99,8 +102,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const signUp = useCallback(async (email: string, password: string) => {
-    const { error } = await supabase.auth.signUp({ email, password })
-    return { error: error ? new Error(error.message) : null }
+    const emailRedirectTo =
+      typeof window !== 'undefined'
+        ? `${window.location.origin}/login`
+        : undefined
+
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      ...(emailRedirectTo ? { options: { emailRedirectTo } } : {}),
+    })
+    if (error) {
+      return { error: new Error(error.message), needsEmailConfirmation: false }
+    }
+    const needsEmailConfirmation = data.session == null
+    return { error: null, needsEmailConfirmation }
   }, [])
 
   const signOut = useCallback(async () => {

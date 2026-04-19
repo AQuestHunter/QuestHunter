@@ -35,13 +35,14 @@ The third adds **`quests.archived`**, tightens RPCs, and **`run_quest_archive_sw
 ## 4. Auth
 
 1. **Authentication → Providers**: enable **Email** (adjust “Confirm email” for testing if you want instant sign-up).
-2. Sign up once in the app, then open **Authentication → Users**, select your user, and under **App metadata** set raw JSON:
+2. **Authentication → URL Configuration**: set **Site URL** to your production app origin (for example `https://your-site.netlify.app`). Under **Redirect URLs**, add allowed origins/paths Supabase may redirect to after email links — at minimum your production URL and **`https://your-site.netlify.app/login`** (the app sends `emailRedirectTo` there when users sign up). Include `http://localhost:5173/login` if you test confirmation locally.
+3. Sign up once in the app, then open **Authentication → Users**, select your user, and under **App metadata** set raw JSON:
 
 ```json
 { "role": "admin" }
 ```
 
-3. Sign out and sign in again so the JWT includes `role`.
+4. Sign out and sign in again so the JWT includes `role`.
 
 ## 5. First quest
 

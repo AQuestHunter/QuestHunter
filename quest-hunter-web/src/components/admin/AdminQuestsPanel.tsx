@@ -156,17 +156,28 @@ function pillClassForBucket(bucket: QuestLifecycleBucket): string {
 type PuzzleDraft = {
   id: string
   prompt: string
-  hint: string
+  /** Tiered hints — first tier revealed first in play */
+  hints: string[]
   answer: string
   xp: string
   inputType: PuzzleInputType
   choices: string
 }
 
+function hintsDraftFromPuzzleJson(x: Record<string, unknown>): string[] {
+  const rawHints = x.hints
+  if (Array.isArray(rawHints) && rawHints.length > 0) {
+    const lines = rawHints.map((h) => String(h).trim()).filter(Boolean)
+    if (lines.length > 0) return lines
+  }
+  if (typeof x.hint === 'string' && x.hint.trim()) return [x.hint.trim()]
+  return ['']
+}
+
 const emptyPuzzle = (): PuzzleDraft => ({
   id: '',
   prompt: '',
-  hint: '',
+  hints: [''],
   answer: '',
   xp: '',
   inputType: 'text',
@@ -210,7 +221,7 @@ function parseBody(raw: Json): QuestBody {
     return {
       id: typeof x.id === 'string' && x.id ? x.id : `puzzle-${i + 1}`,
       prompt: String(x.prompt ?? ''),
-      hint: typeof x.hint === 'string' ? x.hint : '',
+      hints: hintsDraftFromPuzzleJson(x),
       answer: String(x.answer ?? ''),
       xp: typeof x.xp === 'number' ? String(x.xp) : '',
       inputType,
@@ -219,21 +230,25 @@ function parseBody(raw: Json): QuestBody {
   })
   const base: QuestBody = {
     intro: String(o.intro ?? ''),
-    puzzles: puzzles.map((pz) => ({
-      id: pz.id,
-      prompt: pz.prompt,
-      hint: pz.hint || undefined,
-      answer: pz.answer,
-      xp: pz.xp.trim() ? Number(pz.xp) : undefined,
-      inputType: pz.inputType,
-      choices:
-        pz.inputType === 'choice'
-          ? pz.choices
-              .split(',')
-              .map((s) => s.trim())
-              .filter(Boolean)
-          : undefined,
-    })),
+    puzzles: puzzles.map((pz) => {
+      const hintLines = pz.hints.map((h) => h.trim()).filter(Boolean)
+      const basePz = {
+        id: pz.id,
+        prompt: pz.prompt,
+        answer: pz.answer,
+        xp: pz.xp.trim() ? Number(pz.xp) : undefined,
+        inputType: pz.inputType,
+        choices:
+          pz.inputType === 'choice'
+            ? pz.choices
+                .split(',')
+                .map((s) => s.trim())
+                .filter(Boolean)
+            : undefined,
+      }
+      if (hintLines.length === 0) return basePz
+      return { ...basePz, hints: hintLines }
+    }),
     finalePrompt: String(o.finalePrompt ?? ''),
     xpFinale: typeof o.xpFinale === 'number' ? o.xpFinale : undefined,
   }
@@ -246,7 +261,12 @@ function draftsFromBody(body: QuestBody): PuzzleDraft[] {
   return body.puzzles.map((pz, i) => ({
     id: pz.id || `puzzle-${i + 1}`,
     prompt: pz.prompt,
-    hint: pz.hint ?? '',
+    hints:
+      pz.hints && pz.hints.length > 0
+        ? [...pz.hints]
+        : pz.hint?.trim()
+          ? [pz.hint.trim()]
+          : [''],
     answer: pz.answer,
     xp: pz.xp != null ? String(pz.xp) : '',
     inputType: pz.inputType,
@@ -276,6 +296,8 @@ export function AdminQuestsPanel() {
   const [showArchived, setShowArchived] = useState(false)
   const [sweepBusy, setSweepBusy] = useState(false)
   const [campaignFilter, setCampaignFilter] = useState<string>('')
+  const [listSearch, setListSearch] = useState('')
+  const [lifecycleFilter, setLifecycleFilter] = useState<'all' | QuestLifecycleBucket>('all')
   const [projectBulkBusy, setProjectBulkBusy] = useState<Record<string, boolean>>({})
 
   const [slug, setSlug] = useState('')
@@ -348,11 +370,36 @@ export function AdminQuestsPanel() {
     () =>
       rows.filter((r) => {
         if (!showArchived && r.archived) return false
-        if (!campaignFilter.trim()) return true
-        return r.campaign_slug === campaignFilter.trim()
+        if (campaignFilter.trim() && r.campaign_slug !== campaignFilter.trim()) return false
+        if (lifecycleFilter !== 'all' && questLifecycleBucket(r) !== lifecycleFilter) return false
+        const q = listSearch.trim().toLowerCase()
+        if (q) {
+          const inSlug = r.slug.toLowerCase().includes(q)
+          const inTitle = r.title.toLowerCase().includes(q)
+          if (!inSlug && !inTitle) return false
+        }
+        return true
       }),
-    [rows, showArchived, campaignFilter],
+    [rows, showArchived, campaignFilter, lifecycleFilter, listSearch],
   )
+
+  const bucketStats = useMemo(() => {
+    const counts: Record<QuestLifecycleBucket, number> = {
+      live: 0,
+      scheduled: 0,
+      ended: 0,
+      draft: 0,
+      archived: 0,
+    }
+    for (const r of visibleRows) {
+      counts[questLifecycleBucket(r)]++
+    }
+    return counts
+  }, [visibleRows])
+
+  const toggleLifecycleChip = useCallback((b: QuestLifecycleBucket) => {
+    setLifecycleFilter((prev) => (prev === b ? 'all' : b))
+  }, [])
 
   const campaignOptions = useMemo(() => {
     const set = new Set<string>()
@@ -659,14 +706,15 @@ export function AdminQuestsPanel() {
               .map((s) => s.trim())
               .filter(Boolean)
           : undefined
+      const hintLines = pz.hints.map((h) => h.trim()).filter(Boolean)
       return {
         id,
         prompt: pz.prompt.trim(),
-        hint: pz.hint.trim() || undefined,
         answer: pz.answer.trim(),
         xp: pz.xp.trim() ? Number(pz.xp) : undefined,
         inputType: pz.inputType,
         choices,
+        ...(hintLines.length > 0 ? { hints: hintLines } : {}),
       }
     })
 
@@ -691,7 +739,7 @@ export function AdminQuestsPanel() {
       puzzles: cleaned.map((p) => ({
         id: p.id,
         prompt: p.prompt,
-        hint: p.hint || undefined,
+        ...(Array.isArray(p.hints) && p.hints.length > 0 ? { hints: p.hints } : {}),
         answer: p.answer,
         xp: p.xp != null && !Number.isNaN(p.xp) ? p.xp : undefined,
         inputType: p.inputType,
@@ -828,39 +876,75 @@ export function AdminQuestsPanel() {
   )
 
   return (
-    <div className="admin-quests">
-      <div className="admin-toolbar admin-toolbar-wrap">
-        <button type="button" className="ghost-btn mono" onClick={() => resetForm()}>
-          New quest
-        </button>
-        <button type="button" className="ghost-btn mono" onClick={() => void loadRows()} disabled={loading}>
-          Refresh
-        </button>
-        <button
-          type="button"
-          className="ghost-btn mono"
-          disabled={sweepBusy}
-          onClick={() => void runArchiveSweep()}
-          title="Mark quests archived when ends_at + 1 day has passed"
-        >
-          {sweepBusy ? 'Sweep…' : 'Archive sweep'}
-        </button>
-        <label className="field row-inline toolbar-check mono small">
+    <div className="admin-quests admin-quests-shell">
+      <header className="admin-quests-hero">
+        <div className="admin-quests-hero-main">
+          <p className="admin-quests-kicker mono small muted">Operations</p>
+          <h2 className="admin-quests-title">Quest control</h2>
+          <p className="admin-quests-lede muted small">
+            Browse dossiers by project and lifecycle, then edit content in the studio panel. Filters apply to the list
+            only — nothing is deleted until you delete.
+          </p>
+        </div>
+        <div className="admin-quests-hero-actions">
+          <button type="button" className="primary-btn mono admin-quests-cta" onClick={() => resetForm()}>
+            New dossier
+          </button>
+          <button
+            type="button"
+            className="ghost-btn mono"
+            onClick={() => void loadRows()}
+            disabled={loading}
+            title="Reload from database"
+          >
+            {loading ? 'Refreshing…' : 'Refresh'}
+          </button>
+          <button
+            type="button"
+            className="ghost-btn mono"
+            disabled={sweepBusy}
+            onClick={() => void runArchiveSweep()}
+            title="Mark quests archived when ends_at + 1 day has passed"
+          >
+            {sweepBusy ? 'Sweep…' : 'Archive sweep'}
+          </button>
+        </div>
+      </header>
+
+      {!hasCampaignSchema ? (
+        <p className="admin-quests-migrate mono small muted" role="status">
+          Branching columns are not in the database yet. Run migration{' '}
+          <code className="mono">supabase/migrations/20260420000000_campaign_branching.sql</code> in the Supabase SQL
+          Editor, then refresh. Drafts load in legacy mode; saves work without campaign fields.
+        </p>
+      ) : null}
+
+      {error ? (
+        <p className="mono error small admin-quests-alert" role="alert">
+          {error}
+        </p>
+      ) : null}
+
+      <div className="admin-quests-filters">
+        <label className="field admin-quests-search">
+          <span className="sr-only">Search slug or title</span>
           <input
-            type="checkbox"
-            checked={showArchived}
-            onChange={(e) => setShowArchived(e.target.checked)}
+            type="search"
+            className="terminal-input mono"
+            value={listSearch}
+            onChange={(e) => setListSearch(e.target.value)}
+            placeholder="Search slug or title…"
+            autoComplete="off"
           />
-          Show archived
         </label>
-        <label className="field row-inline mono small">
+        <label className="field row-inline mono small admin-quests-filter-project">
           <span>Project</span>
           <select
             className="terminal-input mono small"
             value={campaignFilter}
             onChange={(e) => setCampaignFilter(e.target.value)}
           >
-            <option value="">All</option>
+            <option value="">All projects</option>
             {campaignOptions.map((c) => {
               const sample =
                 rows.find((r) => r.campaign_slug === c && r.campaign_display_name?.trim()) ??
@@ -875,40 +959,58 @@ export function AdminQuestsPanel() {
             })}
           </select>
         </label>
+        <label className="field row-inline mono small admin-quests-filter-archived">
+          <input
+            type="checkbox"
+            checked={showArchived}
+            onChange={(e) => setShowArchived(e.target.checked)}
+          />
+          Archived
+        </label>
         {groupedForList.length > 0 ? (
-          <>
+          <div className="admin-quests-expand">
             <button type="button" className="ghost-btn mono small" onClick={expandAllProjects}>
-              Expand projects
+              Expand all
             </button>
             <button type="button" className="ghost-btn mono small" onClick={collapseAllProjects}>
-              Collapse projects
+              Collapse all
             </button>
-          </>
+          </div>
         ) : null}
       </div>
 
-      {error ? (
-        <p className="mono error small" role="alert">
-          {error}
-        </p>
-      ) : null}
-
-      {!hasCampaignSchema ? (
-        <p className="mono small muted" role="status">
-          Branching columns are not in the database yet. Run migration{' '}
-          <code className="mono">supabase/migrations/20260420000000_campaign_branching.sql</code> in the Supabase SQL
-          Editor, then refresh. Drafts load in legacy mode; saves work without campaign fields.
-        </p>
-      ) : null}
+      <div className="admin-quests-stats mono small" role="group" aria-label="Lifecycle counts for current filters">
+        <span className="muted admin-quests-stats-label">Showing</span>
+        <span className="admin-quests-stat-total accent-strong">{visibleRows.length}</span>
+        <span className="muted">dossiers</span>
+        <span className="admin-quests-stats-sep" aria-hidden />
+        {QUEST_BUCKET_ORDER.map((b) => (
+          <button
+            key={b}
+            type="button"
+            className={`admin-quests-chip ${lifecycleFilter === b ? 'admin-quests-chip--on' : ''}`}
+            onClick={() => toggleLifecycleChip(b)}
+            title={QUEST_BUCKET_HINT[b]}
+          >
+            <span className={`admin-quests-chip-dot admin-quests-chip-dot--${b}`} aria-hidden />
+            <span>{QUEST_BUCKET_SHORT[b]}</span>
+            <span className="admin-quests-chip-n">{bucketStats[b]}</span>
+          </button>
+        ))}
+        {lifecycleFilter !== 'all' ? (
+          <button type="button" className="ghost-btn mono small admin-quests-clear-filter" onClick={() => setLifecycleFilter('all')}>
+            Clear lifecycle filter
+          </button>
+        ) : null}
+      </div>
 
       <div className={editingId ? 'admin-split admin-split--editing' : 'admin-split'}>
-        <div className="admin-list">
-          <div className="admin-list-heading">
-            <h2 className="mono small muted admin-list-heading-title">Quests in this workspace</h2>
+        <aside className="admin-list admin-quests-sidebar" aria-label="Quest list">
+          <div className="admin-list-heading admin-quests-sidebar-head">
+            <h2 className="admin-quests-sidebar-title mono small">Dossier inventory</h2>
             <p className="admin-list-legend mono small muted">
-              Within each project, dossiers are split by{' '}
-              <span className="admin-list-legend-strong">lifecycle</span>
-              : what players see depends on publish, schedule, and archive — not only the “Published” checkbox.
+              Each project groups chapters. Status reflects{' '}
+              <span className="admin-list-legend-strong">publish · schedule · archive</span>, not the title alone.
             </p>
           </div>
           {loading ? (
@@ -1107,15 +1209,17 @@ export function AdminQuestsPanel() {
                                   <li key={r.id} className={`admin-list-li admin-list-li--${bucket}`}>
                                     <button
                                       type="button"
-                                      className={`admin-list-btn admin-list-btn--${bucket}`}
+                                      className={`admin-list-btn admin-list-btn--${bucket}${
+                                        editingId === r.id ? ' admin-list-btn--active' : ''
+                                      }`}
                                       onClick={() => editRow(r)}
                                     >
-                                      <span className="mono muted">#{r.sequence_idx}</span>
-                                      <span className="mono slug">{r.slug}</span>
-                                      <span className="title">{r.title}</span>
-                                      <span className={pillClassForBucket(bucket)}>
-                                        {QUEST_BUCKET_SHORT[bucket]}
+                                      <span className="admin-quest-row-top">
+                                        <span className="mono admin-quest-seq">#{r.sequence_idx}</span>
+                                        <span className={pillClassForBucket(bucket)}>{QUEST_BUCKET_SHORT[bucket]}</span>
                                       </span>
+                                      <span className="mono admin-quest-slug">{r.slug}</span>
+                                      <span className="admin-quest-title">{r.title}</span>
                                     </button>
                                     <button
                                       type="button"
@@ -1137,7 +1241,31 @@ export function AdminQuestsPanel() {
               })}
             </div>
           )}
-        </div>
+        </aside>
+
+        <div className="admin-quests-editor">
+          {!editingId ? (
+            <div className="admin-quests-studio-hint" role="region" aria-label="Studio">
+              <p className="mono small admin-quests-studio-kicker muted">Studio</p>
+              <p className="admin-quests-studio-title">Compose or edit a dossier</p>
+              <ol className="admin-quests-studio-steps mono small muted">
+                <li>
+                  <span className="accent-strong">1</span> Pick a quest in the inventory, or start with{' '}
+                  <button type="button" className="admin-quests-inline-link" onClick={() => resetForm()}>
+                    New dossier
+                  </button>
+                  .
+                </li>
+                <li>
+                  <span className="accent-strong">2</span> Work across Basics → Campaign → Story → Player UI — one save
+                  writes all tabs.
+                </li>
+                <li>
+                  <span className="accent-strong">3</span> Publish and schedule when the narrative is ready for hunters.
+                </li>
+              </ol>
+            </div>
+          ) : null}
 
         <form className="admin-form stack-form admin-editor-form" onSubmit={(e) => void save(e)}>
           <div className="admin-editor-toolbar">
@@ -1145,11 +1273,11 @@ export function AdminQuestsPanel() {
               <div className="admin-editor-title-row">
                 {editingId ? (
                   <button type="button" className="ghost-btn mono small admin-mobile-back" onClick={() => resetForm()}>
-                    ← Back
+                    ← Back to list
                   </button>
                 ) : null}
                 <h2 className="admin-editor-title mono small muted">
-                {editingId ? `Edit · ${editingId.slice(0, 8)}…` : 'Create quest'}
+                {editingId ? `Edit · ${editingId.slice(0, 8)}…` : 'Create dossier'}
               </h2>
               </div>
               <nav className="admin-editor-tabs" role="tablist" aria-label="Quest editor">
@@ -1465,7 +1593,8 @@ export function AdminQuestsPanel() {
           <div className="puzzle-blocks">
             <div className="mono small muted">Puzzles · {puzzleHint}</div>
             <p className="muted small admin-puzzle-lede">
-              Steps run in order. Answers stay server-side. Choice puzzles: comma-separated options.
+              Steps run in order. Answers stay server-side. Optional hints are tiered (players reveal one at a time; XP
+              reduced per tier). Choice puzzles: comma-separated options.
             </p>
             {puzzles.map((pz, idx) => (
               <fieldset key={`${pz.id}-${idx}`} className="puzzle-fieldset">
@@ -1497,18 +1626,56 @@ export function AdminQuestsPanel() {
                     required
                   />
                 </label>
-                <label className="field">
-                  <span className="mono label-text">Hint (optional)</span>
-                  <input
-                    className="terminal-input mono"
-                    value={pz.hint}
-                    onChange={(e) => {
+                <div className="field admin-hints-field">
+                  <span className="mono label-text">Hints (optional, tiered)</span>
+                  <span className="field-hint muted small">
+                    Shown one at a time in play. Each tier applies a cumulative XP penalty on that puzzle (see server).
+                  </span>
+                  {pz.hints.map((h, hIdx) => (
+                    <div key={hIdx} className="admin-hint-tier">
+                      <span className="mono small muted admin-hint-tier-label">Tier {hIdx + 1}</span>
+                      <input
+                        className="terminal-input mono"
+                        value={h}
+                        placeholder={`Hint tier ${hIdx + 1}`}
+                        onChange={(e) => {
+                          const next = [...puzzles]
+                          const nh = [...next[idx].hints]
+                          nh[hIdx] = e.target.value
+                          next[idx] = { ...pz, hints: nh }
+                          setPuzzles(next)
+                        }}
+                      />
+                      {pz.hints.length > 1 ? (
+                        <button
+                          type="button"
+                          className="ghost-btn mono small admin-hint-remove"
+                          onClick={() => {
+                            const next = [...puzzles]
+                            next[idx] = {
+                              ...pz,
+                              hints: pz.hints.filter((_, j) => j !== hIdx),
+                            }
+                            setPuzzles(next)
+                          }}
+                        >
+                          Remove tier
+                        </button>
+                      ) : null}
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    className="ghost-btn mono small"
+                    onClick={() => {
                       const next = [...puzzles]
-                      next[idx] = { ...pz, hint: e.target.value }
+                      next[idx] = { ...pz, hints: [...pz.hints, ''] }
                       setPuzzles(next)
                     }}
-                  />
-                </label>
+                  >
+                    + Add hint tier
+                  </button>
+                </div>
                 <label className="field">
                   <span className="mono label-text">Correct answer</span>
                   <input
@@ -1608,13 +1775,14 @@ export function AdminQuestsPanel() {
 
           <div className="admin-editor-footer">
             <button type="submit" className="primary-btn mono" disabled={saving}>
-              {saving ? 'Saving…' : editingId ? 'Update quest' : 'Create quest'}
+              {saving ? 'Saving…' : editingId ? 'Save dossier' : 'Create dossier'}
             </button>
             <p className="muted small admin-editor-save-hint">
-              Saves everything in all tabs at once.
+              One save writes every tab (basics, campaign, story, player UI).
             </p>
           </div>
         </form>
+        </div>
       </div>
     </div>
   )

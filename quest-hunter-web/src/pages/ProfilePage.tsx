@@ -20,6 +20,29 @@ type FinaleBranchRow = {
 
 const FINALE_PROJECT_COLLATOR = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' })
 
+function branchKey(branch: string): 'control' | 'observe' | 'influence' | 'other' {
+  const u = branch.trim().toUpperCase()
+  if (u === 'CONTROL') return 'control'
+  if (u === 'OBSERVE') return 'observe'
+  if (u === 'INFLUENCE') return 'influence'
+  return 'other'
+}
+
+function formatCompletedAt(iso: string): string {
+  try {
+    const d = new Date(iso)
+    if (Number.isNaN(d.getTime())) return iso
+    return new Intl.DateTimeFormat(undefined, {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(d)
+  } catch {
+    return iso
+  }
+}
+
 export function ProfilePage() {
   const { user, profile, refreshProfile } = useAuth()
   const [hunterName, setHunterName] = useState(profile?.hunter_name ?? '')
@@ -127,6 +150,18 @@ export function ProfilePage() {
     }
   }, [])
 
+  const playerRank = useMemo(() => {
+    const name = profile?.hunter_name?.trim()
+    if (!name) return null
+    const idx = board.findIndex((r) => r.hunter_name === name)
+    return idx === -1 ? null : idx + 1
+  }, [board, profile?.hunter_name])
+
+  const callsign = profile?.hunter_name?.trim()
+  const xpTotal = profile?.xp ?? 0
+  const livesNow = profile?.lives
+  const livesMax = 5
+
   async function saveHunterName(e: FormEvent) {
     e.preventDefault()
     if (!user?.id) return
@@ -168,136 +203,222 @@ export function ProfilePage() {
     }
 
     await refreshProfile()
+    const { data: boardData } = await supabase
+      .from('profiles')
+      .select('hunter_name, xp')
+      .not('hunter_name', 'is', null)
+      .order('xp', { ascending: false })
+      .limit(25)
+    setBoard((boardData ?? []) as BoardRow[])
   }
 
   return (
-    <section className="panel split">
-      <div>
-        <h1>Operator</h1>
-        <p className="muted small">
-          <strong className="display-name-label">Display name:</strong>{' '}
-          {profile?.hunter_name?.trim() ? (
-            <span className="mono accent-strong">{profile.hunter_name}</span>
-          ) : (
-            <span>not set yet</span>
-          )}
+    <section className="panel profile-page">
+      <header className="profile-hero">
+        <p className="profile-hero-tag mono">Operator file</p>
+        <h1 className="profile-hero-title">{callsign || 'Unsigned operator'}</h1>
+        <p className="profile-hero-email mono small muted">
+          <span className="profile-hero-email-label">Channel</span>{' '}
+          <span className="profile-hero-email-val">{user?.email ?? '—'}</span>
         </p>
-        <p className="muted small">Sign-in email (private): {user?.email}</p>
+      </header>
 
-        <form className="stack-form narrow" onSubmit={(e) => void saveHunterName(e)}>
-          <label className="field">
-            <span className="mono label-text">Display name</span>
-            <span className="field-hint muted small">
-              Shown in the header, leaderboard, and logs. Must be unique (hunter callsign).
-            </span>
-            <input
-              className="terminal-input mono"
-              value={hunterName}
-              onChange={(e) => setHunterName(e.target.value)}
-              placeholder="Your public name"
-              minLength={2}
-              maxLength={32}
-            />
-          </label>
-          {error ? (
-            <p className="error mono small" role="alert">
-              {error}
-            </p>
-          ) : null}
-          <button type="submit" className="primary-btn mono" disabled={saving}>
-            {saving ? 'Saving…' : 'Save'}
-          </button>
-        </form>
-
-        <h2 className="mono small muted" style={{ marginTop: '2rem' }}>
-          Finale paths
-        </h2>
-        <p className="muted small">
-          Recent CONTROL / OBSERVE / INFLUENCE choices (per closed dossier). Same data the story engine uses for
-          branching.
-        </p>
-        {finaleLoading ? (
-          <p className="mono muted">loading branches …</p>
-        ) : finaleRows.length === 0 ? (
-          <p className="muted small">No finale choices logged yet.</p>
-        ) : (
-          <div className="finale-project-section">
-            {finaleByProject.length > 1 ? (
-              <div className="finale-project-toolbar">
-                <button type="button" className="ghost-btn mono small" onClick={expandFinaleProjects}>
-                  Expand projects
-                </button>
-                <button type="button" className="ghost-btn mono small" onClick={collapseFinaleProjects}>
-                  Collapse projects
-                </button>
-              </div>
-            ) : null}
-            <div className="finale-project-groups">
-              {finaleByProject.map(([camp, items]) => {
-                const isOpen = finaleProjectOpen[camp] ?? true
-                const { primary, secondary } = getProjectGroupLabel(camp, items)
-                return (
-                  <div key={camp} className="finale-project-group">
-                    <button
-                      type="button"
-                      className="finale-project-toggle mono small"
-                      onClick={() =>
-                        setFinaleProjectOpen((prev) => ({
-                          ...prev,
-                          [camp]: !(prev[camp] ?? true),
-                        }))
-                      }
-                      aria-expanded={isOpen}
-                    >
-                      <span className="admin-project-caret" aria-hidden>
-                        {isOpen ? '▼' : '▶'}
-                      </span>
-                      <span className="admin-project-toggle-text">
-                        <span className="admin-project-line1">
-                          <span className="muted">Project ·</span>{' '}
-                          <span className="accent-strong">{primary}</span>
-                          <span className="muted finale-project-count"> ({items.length})</span>
-                        </span>
-                        {secondary ? (
-                          <span className="admin-project-secondary mono muted">{secondary}</span>
-                        ) : null}
-                      </span>
-                    </button>
-                    {isOpen ? (
-                      <ul className="finale-branch-list mono small finale-branch-list-nested">
-                        {items.map((row, i) => (
-                          <li key={`${row.quest_slug}-${row.completed_at}-${i}`}>
-                            <span className="accent-strong">{row.branch}</span>
-                            <span className="muted"> · </span>
-                            <span>{row.quest_slug}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : null}
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        )}
+      <div className="profile-stat-grid">
+        <article className="profile-stat-card profile-stat-card--xp">
+          <span className="profile-stat-label mono">XP total</span>
+          <span className="profile-stat-value">{xpTotal.toLocaleString()}</span>
+          <span className="profile-stat-hint muted small">From puzzles &amp; finales</span>
+        </article>
+        <article className="profile-stat-card profile-stat-card--lives">
+          <span className="profile-stat-label mono">Charges</span>
+          <span className="profile-stat-value">
+            {typeof livesNow === 'number' ? (
+              <>
+                {livesNow}
+                <span className="profile-stat-max muted"> / {livesMax}</span>
+              </>
+            ) : (
+              '—'
+            )}
+          </span>
+          <span className="profile-stat-hint muted small">Wrong answers spend one · +1 / 5 min</span>
+        </article>
+        <article className="profile-stat-card profile-stat-card--rank">
+          <span className="profile-stat-label mono">Leaderboard</span>
+          <span className="profile-stat-value">
+            {playerRank != null ? (
+              <>
+                #{playerRank}
+                <span className="profile-stat-max muted"> / 25</span>
+              </>
+            ) : callsign ? (
+              <span className="profile-stat-unranked">Outside top 25</span>
+            ) : (
+              '—'
+            )}
+          </span>
+          <span className="profile-stat-hint muted small">Top hunters this board</span>
+        </article>
       </div>
 
-      <div>
-        <h2>Leaderboard</h2>
-        <p className="muted small">Top hunters by XP (awarded per puzzle + finale).</p>
-        {boardLoading ? (
-          <p className="mono muted">loading ranks …</p>
-        ) : (
-          <ol className="leaderboard mono">
-            {board.map((row, i) => (
-              <li key={`${row.hunter_name}-${i}`}>
-                <span className="rank">{i + 1}</span>
-                <span className="name">{row.hunter_name}</span>
-                <span className="xp">{row.xp} XP</span>
-              </li>
-            ))}
-          </ol>
-        )}
+      <div className="profile-layout">
+        <div className="profile-main">
+          <div className="profile-card profile-card--form">
+            <h2 className="profile-card-title mono">Callsign</h2>
+            <p className="muted small profile-card-lede">
+              Public handle — header, leaderboard, logs. Unique across operators.
+            </p>
+            <form className="stack-form profile-form" onSubmit={(e) => void saveHunterName(e)}>
+              <label className="field">
+                <span className="mono label-text">Display name</span>
+                <input
+                  className="terminal-input mono"
+                  value={hunterName}
+                  onChange={(e) => setHunterName(e.target.value)}
+                  placeholder="Your callsign"
+                  minLength={2}
+                  maxLength={32}
+                  autoComplete="nickname"
+                />
+              </label>
+              {error ? (
+                <p className="error mono small" role="alert">
+                  {error}
+                </p>
+              ) : null}
+              <button type="submit" className="primary-btn mono" disabled={saving}>
+                {saving ? 'Committing…' : 'Save callsign'}
+              </button>
+            </form>
+          </div>
+
+          <section className="profile-card profile-card--finale">
+            <h2 className="profile-card-title mono">Finale paths</h2>
+            <p className="muted small profile-card-lede">
+              Recent CONTROL · OBSERVE · INFLUENCE resolutions. Used by the story engine for branching.
+            </p>
+            {finaleLoading ? (
+              <p className="mono muted profile-card-loading">Syncing branch log…</p>
+            ) : finaleRows.length === 0 ? (
+              <p className="muted small profile-empty-hint">No finale choices logged yet.</p>
+            ) : (
+              <div className="finale-project-section">
+                {finaleByProject.length > 1 ? (
+                  <div className="finale-project-toolbar">
+                    <button type="button" className="ghost-btn mono small" onClick={expandFinaleProjects}>
+                      Expand all
+                    </button>
+                    <button type="button" className="ghost-btn mono small" onClick={collapseFinaleProjects}>
+                      Collapse all
+                    </button>
+                  </div>
+                ) : null}
+                <div className="finale-project-groups">
+                  {finaleByProject.map(([camp, items]) => {
+                    const isOpen = finaleProjectOpen[camp] ?? true
+                    const { primary, secondary } = getProjectGroupLabel(camp, items)
+                    return (
+                      <div key={camp} className="finale-project-group profile-finale-group">
+                        <button
+                          type="button"
+                          className="finale-project-toggle mono small profile-finale-toggle"
+                          onClick={() =>
+                            setFinaleProjectOpen((prev) => ({
+                              ...prev,
+                              [camp]: !(prev[camp] ?? true),
+                            }))
+                          }
+                          aria-expanded={isOpen}
+                        >
+                          <span className="admin-project-caret" aria-hidden>
+                            {isOpen ? '▼' : '▶'}
+                          </span>
+                          <span className="admin-project-toggle-text">
+                            <span className="admin-project-line1">
+                              <span className="muted">Project ·</span>{' '}
+                              <span className="accent-strong">{primary}</span>
+                              <span className="muted finale-project-count"> ({items.length})</span>
+                            </span>
+                            {secondary ? (
+                              <span className="admin-project-secondary mono muted">{secondary}</span>
+                            ) : null}
+                          </span>
+                        </button>
+                        {isOpen ? (
+                          <ul className="finale-branch-list finale-branch-list--enhanced mono small">
+                            {items.map((row, i) => {
+                              const bk = branchKey(row.branch)
+                              return (
+                                <li
+                                  key={`${row.quest_slug}-${row.completed_at}-${i}`}
+                                  className="finale-branch-row"
+                                >
+                                  <div className="finale-branch-row-main">
+                                    <span
+                                      className={`finale-branch-pill finale-branch-pill--${bk}`}
+                                      title="Finale branch"
+                                    >
+                                      {row.branch}
+                                    </span>
+                                    <div className="finale-branch-text">
+                                      <span className="finale-branch-title">{row.quest_title}</span>
+                                      <span className="finale-branch-slug muted">{row.quest_slug}</span>
+                                    </div>
+                                  </div>
+                                  <time className="finale-branch-time muted" dateTime={row.completed_at}>
+                                    {formatCompletedAt(row.completed_at)}
+                                  </time>
+                                </li>
+                              )
+                            })}
+                          </ul>
+                        ) : null}
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+          </section>
+        </div>
+
+        <aside className="profile-side">
+          <div className="profile-card profile-card--board">
+            <h2 className="profile-card-title mono">Leaderboard</h2>
+            <p className="muted small profile-card-lede">Top {board.length || 25} by XP.</p>
+            {boardLoading ? (
+              <p className="mono muted profile-card-loading">Loading ranks…</p>
+            ) : board.length === 0 ? (
+              <p className="muted small profile-empty-hint">No ranked operators yet.</p>
+            ) : (
+              <ol className="leaderboard leaderboard--profile mono">
+                {board.map((row, i) => {
+                  const rank = i + 1
+                  const isSelf = Boolean(callsign && row.hunter_name === callsign)
+                  const topClass =
+                    rank === 1 ? 'leaderboard-row--gold' : rank === 2 ? 'leaderboard-row--silver' : rank === 3 ? 'leaderboard-row--bronze' : ''
+                  return (
+                    <li
+                      key={`${row.hunter_name}-${i}`}
+                      className={[topClass, isSelf ? 'leaderboard-row--self' : ''].filter(Boolean).join(' ')}
+                    >
+                      <span className="rank" aria-label={`Rank ${rank}`}>
+                        {rank <= 3 ? (
+                          <span className="leaderboard-medal" aria-hidden>
+                            {rank === 1 ? '◆' : rank === 2 ? '◇' : '△'}
+                          </span>
+                        ) : null}
+                        <span className="leaderboard-rank-num">{rank}</span>
+                      </span>
+                      <span className="name">{row.hunter_name}</span>
+                      <span className="xp">{row.xp.toLocaleString()} XP</span>
+                    </li>
+                  )
+                })}
+              </ol>
+            )}
+          </div>
+        </aside>
       </div>
     </section>
   )

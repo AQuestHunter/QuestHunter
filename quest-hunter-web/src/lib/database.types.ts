@@ -14,6 +14,8 @@ export type Database = {
           id: string
           hunter_name: string | null
           xp: number
+          lives: number
+          next_life_at: string | null
           created_at: string
           updated_at: string
         }
@@ -21,6 +23,8 @@ export type Database = {
           id: string
           hunter_name?: string | null
           xp?: number
+          lives?: number
+          next_life_at?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -28,6 +32,8 @@ export type Database = {
           id?: string
           hunter_name?: string | null
           xp?: number
+          lives?: number
+          next_life_at?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -177,6 +183,14 @@ export type Database = {
         Args: { p_quest_id: string }
         Returns: undefined
       }
+      peek_revealed_puzzle_hints: {
+        Args: { p_quest_id: string; p_puzzle_id: string }
+        Returns: Json
+      }
+      reveal_puzzle_hint: {
+        Args: { p_quest_id: string; p_puzzle_id: string }
+        Returns: Json
+      }
       submit_puzzle_answer: {
         Args: {
           p_quest_id: string
@@ -187,6 +201,10 @@ export type Database = {
       }
       submit_finale_choice: {
         Args: { p_quest_id: string; p_choice: string }
+        Returns: Json
+      }
+      ack_quest_pre_finale: {
+        Args: { p_quest_id: string }
         Returns: Json
       }
       run_quest_archive_sweep_admin: {

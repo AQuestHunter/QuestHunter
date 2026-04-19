@@ -99,6 +99,117 @@ export async function ensureQuestProgress(questId: string): Promise<{ error: str
   return { error: error?.message ?? null }
 }
 
+export type PeekRevealedHintsResult = {
+  ok: boolean
+  error: string | null
+  /** Decoded hint strings in order (0..used-1) */
+  hints: string[]
+  tier: number
+  total: number
+  baseXp: number
+  projectedXp: number
+}
+
+function parseStringArray(r: unknown): string[] {
+  if (!Array.isArray(r)) return []
+  return r.map((x) => (typeof x === 'string' ? x : String(x)))
+}
+
+export async function peekRevealedPuzzleHints(
+  questId: string,
+  puzzleId: string,
+): Promise<PeekRevealedHintsResult> {
+  const { data, error } = await supabase.rpc('peek_revealed_puzzle_hints', {
+    p_quest_id: questId,
+    p_puzzle_id: puzzleId,
+  })
+  if (error) {
+    return { ok: false, error: error.message, hints: [], tier: 0, total: 0, baseXp: 25, projectedXp: 25 }
+  }
+  const r = data as Record<string, unknown>
+  if (r && r.ok === false) {
+    return {
+      ok: false,
+      error: typeof r.error === 'string' ? r.error : 'unknown',
+      hints: [],
+      tier: 0,
+      total: 0,
+      baseXp: 25,
+      projectedXp: 25,
+    }
+  }
+  return {
+    ok: r.ok === true,
+    error: null,
+    hints: parseStringArray(r.hints),
+    tier: typeof r.tier === 'number' ? r.tier : 0,
+    total: typeof r.total === 'number' ? r.total : 0,
+    baseXp: typeof r.baseXp === 'number' ? r.baseXp : 25,
+    projectedXp: typeof r.projectedXp === 'number' ? r.projectedXp : 25,
+  }
+}
+
+export type RevealPuzzleHintResult = {
+  ok: boolean
+  error: string | null
+  hint: string | null
+  tier: number
+  total: number
+  baseXp: number
+  projectedXp: number
+}
+
+export async function revealPuzzleHint(questId: string, puzzleId: string): Promise<RevealPuzzleHintResult> {
+  const { data, error } = await supabase.rpc('reveal_puzzle_hint', {
+    p_quest_id: questId,
+    p_puzzle_id: puzzleId,
+  })
+  if (error) {
+    return {
+      ok: false,
+      error: error.message,
+      hint: null,
+      tier: 0,
+      total: 0,
+      baseXp: 25,
+      projectedXp: 25,
+    }
+  }
+  const r = data as Record<string, unknown>
+  if (r && r.ok === false) {
+    return {
+      ok: false,
+      error: typeof r.error === 'string' ? r.error : 'unknown',
+      hint: null,
+      tier: 0,
+      total: 0,
+      baseXp: 25,
+      projectedXp: 25,
+    }
+  }
+  return {
+    ok: true,
+    error: null,
+    hint: typeof r.hint === 'string' ? r.hint : null,
+    tier: typeof r.tier === 'number' ? r.tier : 0,
+    total: typeof r.total === 'number' ? r.total : 0,
+    baseXp: typeof r.baseXp === 'number' ? r.baseXp : 25,
+    projectedXp: typeof r.projectedXp === 'number' ? r.projectedXp : 25,
+  }
+}
+
+function parseRpcNextLifeAt(r: Record<string, unknown>): string | null {
+  const raw = r.next_life_at
+  if (raw == null) return null
+  if (typeof raw === 'string') return raw
+  return null
+}
+
+function parseRpcLives(r: Record<string, unknown>): number | undefined {
+  const raw = r.lives
+  return typeof raw === 'number' && Number.isFinite(raw) ? raw : undefined
+}
+
 export async function submitPuzzleAnswer(
   questId: string,
   puzzleId: string,
@@ -107,28 +218,77 @@ export async function submitPuzzleAnswer(
   correct: boolean
   fatal: boolean
   error: string | null
+  lives?: number
+  nextLifeAt?: string | null
+  xpAwarded?: number
+  xpBase?: number
+  hintsUsed?: number
+  wrongStrikes?: number
+  nearMiss?: string | null
+  cleanSolveBonus?: boolean
 }> {
   const { data, error } = await supabase.rpc('submit_puzzle_answer', {
     p_quest_id: questId,
     p_puzzle_id: puzzleId,
     p_attempt: attempt,
   })
-  if (error) return { correct: false, fatal: false, error: error.message }
+  if (error) {
+    return { correct: false, fatal: false, error: error.message }
+  }
   const r = data as Record<string, unknown>
+  const lives = parseRpcLives(r)
+  const nextLifeAt = parseRpcNextLifeAt(r)
+  const xpAwarded = typeof r.xpAwarded === 'number' ? r.xpAwarded : undefined
+  const xpBase = typeof r.xpBase === 'number' ? r.xpBase : undefined
+  const hintsUsed = typeof r.hintsUsed === 'number' ? r.hintsUsed : undefined
+  const wrongStrikes = typeof r.wrongStrikes === 'number' ? r.wrongStrikes : undefined
+  const nearMiss = typeof r.nearMiss === 'string' ? r.nearMiss : null
+  const cleanSolveBonus = typeof r.cleanSolveBonus === 'boolean' ? r.cleanSolveBonus : undefined
   if (r && r.ok === false) {
     return {
       correct: false,
       fatal: false,
       error: typeof r.error === 'string' ? r.error : 'unknown',
+      lives,
+      nextLifeAt,
     }
   }
-  return { correct: r.correct === true, fatal: r.fatal === true, error: null }
+  return {
+    correct: r.correct === true,
+    fatal: r.fatal === true,
+    error: null,
+    lives,
+    nextLifeAt,
+    xpAwarded,
+    xpBase,
+    hintsUsed,
+    wrongStrikes,
+    nearMiss,
+    cleanSolveBonus,
+  }
+}
+
+export async function ackQuestPreFinale(questId: string): Promise<{ error: string | null }> {
+  const { data, error } = await supabase.rpc('ack_quest_pre_finale', {
+    p_quest_id: questId,
+  })
+  if (error) return { error: error.message }
+  const r = data as Record<string, unknown>
+  if (r && r.ok === false) {
+    return { error: typeof r.error === 'string' ? r.error : 'unknown' }
+  }
+  return { error: null }
 }
 
 export async function submitFinale(
   questId: string,
   choice: 'CONTROL' | 'OBSERVE' | 'INFLUENCE',
-): Promise<{ error: string | null }> {
+): Promise<{
+  error: string | null
+  xpAwarded?: number
+  xpFinaleBase?: number
+  finaleMultiplier?: number
+}> {
   const { data, error } = await supabase.rpc('submit_finale_choice', {
     p_quest_id: questId,
     p_choice: choice,
@@ -138,5 +298,9 @@ export async function submitFinale(
   if (r && r.ok === false) {
     return { error: typeof r.error === 'string' ? r.error : 'unknown' }
   }
-  return { error: null }
+  const xpAwarded = typeof r.xpAwarded === 'number' ? r.xpAwarded : undefined
+  const xpFinaleBase = typeof r.xpFinaleBase === 'number' ? r.xpFinaleBase : undefined
+  const finaleMultiplier =
+    typeof r.finaleMultiplier === 'number' ? r.finaleMultiplier : undefined
+  return { error: null, xpAwarded, xpFinaleBase, finaleMultiplier }
 }

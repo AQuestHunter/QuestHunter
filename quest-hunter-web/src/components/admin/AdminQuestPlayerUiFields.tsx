@@ -62,6 +62,25 @@ export function AdminQuestPlayerUiFields({ uiDraft, setUiDraft }: Props) {
           />
         </label>
         <label className="field">
+          <span className="mono label-text">Reveal hint button</span>
+          <span className="field-hint muted small">Default: {DEFAULT_QUEST_UI.hintRevealLabel}</span>
+          <input
+            className="terminal-input mono"
+            value={uiDraft.hintRevealLabel}
+            onChange={(e) => setUiDraft((u) => ({ ...u, hintRevealLabel: e.target.value }))}
+          />
+        </label>
+        <label className="field">
+          <span className="mono label-text">XP / hint note</span>
+          <span className="field-hint muted small">Shown under projected XP. Default: {DEFAULT_QUEST_UI.hintXpNote}</span>
+          <textarea
+            className="terminal-input mono tall"
+            rows={2}
+            value={uiDraft.hintXpNote}
+            onChange={(e) => setUiDraft((u) => ({ ...u, hintXpNote: e.target.value }))}
+          />
+        </label>
+        <label className="field">
           <span className="mono label-text">Answer placeholder</span>
           <span className="field-hint muted small">Default: {DEFAULT_QUEST_UI.answerPlaceholder}</span>
           <input

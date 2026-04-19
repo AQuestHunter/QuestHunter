@@ -1,14 +1,44 @@
-import { type FormEvent, useCallback, useEffect, useMemo, useState } from 'react'
+import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import {
+  ackQuestPreFinale,
   ensureQuestProgress,
   fetchPlayerQuestPayload,
+  peekRevealedPuzzleHints,
+  revealPuzzleHint,
   submitFinale,
   submitPuzzleAnswer,
 } from '../lib/questPlay'
 import { mergeQuestUi } from '../lib/questUiDefaults'
 import type { PlayerQuestPayload, QuestSummary } from '../types/quest'
 import { useAuth } from '../contexts/AuthContext'
+
+const LIVES_DEFAULT_MAX = 5
+
+function hintRpcErrorMessage(code: string): string {
+  switch (code) {
+    case 'all_hints_revealed':
+      return 'All hints for this step are already revealed.'
+    case 'no_hints':
+      return 'No hints are configured for this step.'
+    case 'wrong_puzzle':
+      return 'Syncing puzzle state… try again.'
+    default:
+      return code
+  }
+}
+
+function formatLivesCountdown(iso: string | null | undefined): string | null {
+  if (!iso) return null
+  const t = new Date(iso).getTime()
+  if (Number.isNaN(t)) return null
+  const ms = Math.max(0, t - Date.now())
+  if (ms <= 0) return '0:00'
+  const sec = Math.ceil(ms / 1000)
+  const m = Math.floor(sec / 60)
+  const r = sec % 60
+  return `${m}:${r.toString().padStart(2, '0')}`
+}
 
 type Props = {
   summary: QuestSummary
@@ -26,6 +56,36 @@ export function QuestRunner({ summary, onDone }: Props) {
   const [choiceConfirm, setChoiceConfirm] = useState<string | null>(null)
   const [finaleError, setFinaleError] = useState<string | null>(null)
   const [introAck, setIntroAck] = useState(false)
+  const [liveHud, setLiveHud] = useState<{
+    lives: number
+    livesMax: number
+    nextLifeAt: string | null
+  }>({
+    lives: LIVES_DEFAULT_MAX,
+    livesMax: LIVES_DEFAULT_MAX,
+    nextLifeAt: null,
+  })
+  /** Drives countdown re-renders */
+  const [clockTick, setClockTick] = useState(0)
+
+  /** Shown briefly after a correct puzzle (survives step advance). */
+  const [xpFlash, setXpFlash] = useState<{
+    xp: number
+    base: number
+    hints: number
+    cleanBonus?: boolean
+  } | null>(null)
+  const [nearMissNote, setNearMissNote] = useState<string | null>(null)
+  const [finaleXpFlash, setFinaleXpFlash] = useState<number | null>(null)
+  const [revealedHints, setRevealedHints] = useState<string[]>([])
+  const [hintTier, setHintTier] = useState(0)
+  const [hintTotal, setHintTotal] = useState(0)
+  const [hintBaseXp, setHintBaseXp] = useState(25)
+  const [hintProjectedXp, setHintProjectedXp] = useState(25)
+  const [hintRevealBusy, setHintRevealBusy] = useState(false)
+  const [hintUiError, setHintUiError] = useState<string | null>(null)
+
+  const xpFlashClearRef = useRef(0)
 
   const [prog, setProg] = useState<{
     step: number
@@ -33,13 +93,14 @@ export function QuestRunner({ summary, onDone }: Props) {
     branch: string | null
     failed_at: string | null
     failed_puzzle_key: string | null
+    state: Record<string, unknown> | null
   } | null>(null)
 
   const reloadProgress = useCallback(async () => {
     if (!user?.id) return
     const { data, error } = await supabase
       .from('user_quest_progress')
-      .select('step, completed_at, branch, failed_at, failed_puzzle_key')
+      .select('step, completed_at, branch, failed_at, failed_puzzle_key, state')
       .eq('user_id', user.id)
       .eq('quest_id', summary.id)
       .maybeSingle()
@@ -50,9 +111,22 @@ export function QuestRunner({ summary, onDone }: Props) {
     }
 
     if (!data) {
-      setProg({ step: 0, completed_at: null, branch: null, failed_at: null, failed_puzzle_key: null })
+      setProg({
+        step: 0,
+        completed_at: null,
+        branch: null,
+        failed_at: null,
+        failed_puzzle_key: null,
+        state: null,
+      })
       return
     }
+
+    const rawState = (data as { state?: unknown }).state
+    const state =
+      rawState && typeof rawState === 'object' && !Array.isArray(rawState)
+        ? (rawState as Record<string, unknown>)
+        : null
 
     setProg({
       step: data.step,
@@ -60,8 +134,56 @@ export function QuestRunner({ summary, onDone }: Props) {
       branch: data.branch,
       failed_at: (data as { failed_at?: string | null }).failed_at ?? null,
       failed_puzzle_key: (data as { failed_puzzle_key?: string | null }).failed_puzzle_key ?? null,
+      state,
     })
   }, [summary.id, user?.id])
+
+  const syncPayloadLives = useCallback(async () => {
+    const { payload: pl } = await fetchPlayerQuestPayload(summary.id)
+    if (!pl) return
+    setLiveHud({
+      lives: typeof pl.lives === 'number' ? pl.lives : LIVES_DEFAULT_MAX,
+      livesMax: typeof pl.livesMax === 'number' ? pl.livesMax : LIVES_DEFAULT_MAX,
+      nextLifeAt: pl.nextLifeAt ?? null,
+    })
+  }, [summary.id])
+
+  const applyLivesFromSubmit = useCallback((res: { lives?: number; nextLifeAt?: string | null }) => {
+    if (res.lives === undefined) return
+    setLiveHud((prev) => ({
+      lives: res.lives!,
+      livesMax: prev.livesMax,
+      nextLifeAt: res.nextLifeAt !== undefined ? res.nextLifeAt : prev.nextLifeAt,
+    }))
+  }, [])
+
+  const pushXpFlash = useCallback(
+    (award: { xp: number; base: number; hints: number; cleanBonus?: boolean }) => {
+      window.clearTimeout(xpFlashClearRef.current)
+      setXpFlash(award)
+      xpFlashClearRef.current = window.setTimeout(() => setXpFlash(null), 2800)
+    },
+    [],
+  )
+
+  useEffect(() => {
+    const id = window.setInterval(() => setClockTick((n) => n + 1), 1000)
+    return () => window.clearInterval(id)
+  }, [])
+
+  useEffect(() => {
+    if (!liveHud.nextLifeAt || liveHud.lives >= liveHud.livesMax) return
+    const target = new Date(liveHud.nextLifeAt).getTime()
+    if (Number.isNaN(target)) return
+    const id = window.setInterval(() => {
+      if (Date.now() >= target) void syncPayloadLives()
+    }, 2000)
+    return () => window.clearInterval(id)
+  }, [liveHud.nextLifeAt, liveHud.lives, liveHud.livesMax, syncPayloadLives])
+
+  useEffect(() => {
+    return () => window.clearTimeout(xpFlashClearRef.current)
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -79,6 +201,11 @@ export function QuestRunner({ summary, onDone }: Props) {
       }
 
       setPayload(pl)
+      setLiveHud({
+        lives: typeof pl.lives === 'number' ? pl.lives : LIVES_DEFAULT_MAX,
+        livesMax: typeof pl.livesMax === 'number' ? pl.livesMax : LIVES_DEFAULT_MAX,
+        nextLifeAt: pl.nextLifeAt ?? null,
+      })
       await reloadProgress()
     }
 
@@ -100,31 +227,115 @@ export function QuestRunner({ summary, onDone }: Props) {
 
   const puzzles = payload?.puzzles ?? []
   const step = prog?.step ?? 0
+
   const completedAt = prog?.completed_at ?? null
   const finaleBranch = prog?.branch ?? null
   const failedAt = prog?.failed_at ?? null
 
-  const ui = useMemo(() => mergeQuestUi(payload?.ui), [payload?.ui])
+  const preFinaleAck = Boolean(prog?.state?.preFinaleAck === true)
+  const hasPreFinaleCopy = useMemo(() => {
+    const p = payload?.preFinale
+    if (!p || typeof p !== 'object') return false
+    const s = typeof p.summary === 'string' ? p.summary.trim() : ''
+    const i = typeof p.implication === 'string' ? p.implication.trim() : ''
+    return Boolean(s || i)
+  }, [payload?.preFinale])
 
   const phase = useMemo(() => {
     if (!payload || !prog) return 'loading'
     if (completedAt) return 'done'
     if (failedAt) return 'failed'
     if (step < puzzles.length) return 'puzzle'
+    if (hasPreFinaleCopy && !preFinaleAck) return 'preFinale'
     return 'finale'
-  }, [completedAt, failedAt, payload, prog, puzzles.length, step])
+  }, [completedAt, failedAt, hasPreFinaleCopy, payload, preFinaleAck, prog, puzzles.length, step])
+
+  const currentPuzzleId = puzzles[step]?.id
+
+  useEffect(() => {
+    setNearMissNote(null)
+  }, [currentPuzzleId])
+
+  useEffect(() => {
+    if (!currentPuzzleId || phase !== 'puzzle') return
+    let cancelled = false
+    void (async () => {
+      const r = await peekRevealedPuzzleHints(summary.id, currentPuzzleId)
+      if (cancelled) return
+      const fallbackTotal = puzzles[step]?.hintCount ?? 0
+      setHintUiError(null)
+      if (r.ok) {
+        setRevealedHints(r.hints)
+        setHintTier(r.tier)
+        setHintTotal(r.total > 0 ? r.total : fallbackTotal)
+        setHintBaseXp(r.baseXp)
+        setHintProjectedXp(r.projectedXp)
+      } else {
+        setRevealedHints([])
+        setHintTier(0)
+        setHintTotal(fallbackTotal)
+        setHintBaseXp(25)
+        setHintProjectedXp(25)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [summary.id, currentPuzzleId, phase, puzzles, step])
+
+  const ui = useMemo(() => mergeQuestUi(payload?.ui), [payload?.ui])
+
+  const nextLifeLabel = useMemo(
+    () => (liveHud.nextLifeAt ? formatLivesCountdown(liveHud.nextLifeAt) : null),
+    [liveHud.nextLifeAt, clockTick],
+  )
 
   const currentPuzzle = puzzles[step]
+
+  const onRevealNextHint = useCallback(async () => {
+    if (!currentPuzzle || hintRevealBusy) return
+    const fromPayload = currentPuzzle.hintCount ?? 0
+    const effTotal = hintTotal > 0 ? hintTotal : fromPayload
+    if (effTotal < 1 || hintTier >= effTotal) return
+    setHintRevealBusy(true)
+    setHintUiError(null)
+    const r = await revealPuzzleHint(summary.id, currentPuzzle.id)
+    setHintRevealBusy(false)
+    if (!r.ok) {
+      setHintUiError(hintRpcErrorMessage(r.error ?? 'unknown'))
+      return
+    }
+    if (r.hint) setRevealedHints((prev) => [...prev, r.hint!])
+    setHintTier(r.tier)
+    setHintTotal(r.total > 0 ? r.total : effTotal)
+    setHintBaseXp(r.baseXp)
+    setHintProjectedXp(r.projectedXp)
+  }, [currentPuzzle, hintRevealBusy, hintTier, hintTotal, summary.id])
 
   async function onSubmitPuzzle(e: FormEvent) {
     e.preventDefault()
     if (!currentPuzzle || busy) return
+    if (liveHud.lives < 1) {
+      setPuzzleError('no_lives')
+      return
+    }
     setPuzzleError(null)
+    setNearMissNote(null)
     setBusy(true)
     const res = await submitPuzzleAnswer(summary.id, currentPuzzle.id, attempt)
     setBusy(false)
+    applyLivesFromSubmit(res)
+    await refreshProfile()
 
     if (res.error === 'wrong_order') {
+      setShake(true)
+      window.setTimeout(() => setShake(false), 420)
+      setAttempt('')
+      return
+    }
+
+    if (res.error === 'no_lives') {
+      setPuzzleError('no_lives')
       setShake(true)
       window.setTimeout(() => setShake(false), 420)
       setAttempt('')
@@ -140,6 +351,7 @@ export function QuestRunner({ summary, onDone }: Props) {
     }
 
     if (!res.correct) {
+      setNearMissNote(res.nearMiss ?? null)
       setShake(true)
       window.setTimeout(() => setShake(false), 420)
       setAttempt('')
@@ -150,6 +362,14 @@ export function QuestRunner({ summary, onDone }: Props) {
       return
     }
 
+    if (res.xpAwarded != null) {
+      pushXpFlash({
+        xp: res.xpAwarded,
+        base: res.xpBase ?? 25,
+        hints: res.hintsUsed ?? 0,
+        cleanBonus: res.cleanSolveBonus === true,
+      })
+    }
     setAttempt('')
     await reloadProgress()
     await refreshProfile()
@@ -163,6 +383,9 @@ export function QuestRunner({ summary, onDone }: Props) {
     if (err.error) {
       setFinaleError(err.error)
       return
+    }
+    if (err.xpAwarded != null) {
+      setFinaleXpFlash(err.xpAwarded)
     }
     await reloadProgress()
     await refreshProfile()
@@ -202,7 +425,8 @@ export function QuestRunner({ summary, onDone }: Props) {
   if (
     payload.intro.trim().length > 0 &&
     !introAck &&
-    phase !== 'done'
+    phase !== 'done' &&
+    step < puzzles.length
   ) {
     return (
       <article className="quest-intro-panel quiz-intro">
@@ -235,6 +459,11 @@ export function QuestRunner({ summary, onDone }: Props) {
           {ui.completeSlugPrefix} {summary.slug}
         </p>
         <h2 className="quiz-complete-title">{ui.completeTitle}</h2>
+        {finaleXpFlash != null ? (
+          <p className="mono small quiz-complete-xp" role="status">
+            Finale +{finaleXpFlash} XP
+          </p>
+        ) : null}
         <p className="muted quiz-complete-lede">
           {ui.completeLede.replace(/\{branch\}/g, finaleBranch ?? '—')}
         </p>
@@ -259,12 +488,60 @@ export function QuestRunner({ summary, onDone }: Props) {
     )
   }
 
+  if (phase === 'preFinale' && payload?.preFinale) {
+    const pf = payload.preFinale
+    const slotSummary = typeof pf.summary === 'string' ? pf.summary : ''
+    const slotImplication = typeof pf.implication === 'string' ? pf.implication : ''
+    return (
+      <article className="quest-terminal quiz-surface quiz-prefinale">
+        <header className="quiz-head mono">
+          <span className="quiz-head-badge">{ui.preFinaleBadge}</span>
+          <span className="quiz-head-step">{ui.preFinaleHeadline}</span>
+        </header>
+        <div className="quiz-body">
+          {slotSummary ? <p className="narrative quiz-narrative">{slotSummary}</p> : null}
+          {slotImplication ? (
+            <p className="narrative quiz-narrative muted">{slotImplication}</p>
+          ) : null}
+          <button
+            type="button"
+            className="primary-btn mono quiz-intro-cta"
+            disabled={busy}
+            onClick={() => {
+              void (async () => {
+                setFinaleError(null)
+                setBusy(true)
+                const r = await ackQuestPreFinale(summary.id)
+                setBusy(false)
+                if (r.error) {
+                  setFinaleError(r.error)
+                  return
+                }
+                await reloadProgress()
+              })()
+            }}
+          >
+            {busy ? ui.submitBusyLabel : ui.preFinaleCta}
+          </button>
+          {finaleError ? (
+            <p className="mono error small" role="alert">
+              {finaleError}
+            </p>
+          ) : null}
+        </div>
+      </article>
+    )
+  }
+
   if (phase === 'puzzle' && currentPuzzle) {
     const isChoice = currentPuzzle.inputType === 'choice' && (currentPuzzle.choices?.length ?? 0) > 0
     const isSingleAttemptChoice = Boolean(isChoice && currentPuzzle.singleAttempt)
     const isFatalChoice = Boolean(isChoice && currentPuzzle.fatalWrong)
 
     const progressPct = puzzles.length > 0 ? ((step + 1) / puzzles.length) * 100 : 0
+    const hintCountPayload = currentPuzzle.hintCount ?? 0
+    const effectiveHintTotal = hintTotal > 0 ? hintTotal : hintCountPayload
+    const canRevealMore = effectiveHintTotal > 0 && hintTier < effectiveHintTotal
 
     return (
       <article className={`quest-terminal quiz-surface ${shake ? 'shake glitch-border' : ''}`}>
@@ -277,13 +554,86 @@ export function QuestRunner({ summary, onDone }: Props) {
             {step + 1} / {puzzles.length}
           </span>
         </header>
+        <div className="quiz-lives-bar" aria-live="polite">
+          <span className="quiz-lives-label muted small">Charges</span>
+          <span className="quiz-lives-dots" title="Wrong answer uses one charge. +1 every 5 min up to 5.">
+            {Array.from({ length: liveHud.livesMax }, (_, i) => (
+              <span
+                key={i}
+                className={i < liveHud.lives ? 'quiz-life-dot quiz-life-dot--on' : 'quiz-life-dot quiz-life-dot--off'}
+                aria-hidden
+              />
+            ))}
+          </span>
+          {liveHud.lives < liveHud.livesMax && nextLifeLabel ? (
+            <span className="quiz-lives-next muted small">Next +1 in {nextLifeLabel}</span>
+          ) : (
+            <span className="quiz-lives-full small">Reserve full</span>
+          )}
+        </div>
+        {liveHud.lives < 1 ? (
+          <p className="mono small quiz-no-lives-note" role="alert">
+            No charges left.{nextLifeLabel ? ` Next in ${nextLifeLabel}.` : ''}
+          </p>
+        ) : null}
+        {xpFlash ? (
+          <div className="quiz-xp-flash-wrap" role="status" aria-live="polite">
+            <p className="quiz-xp-flash mono small">
+              +{xpFlash.xp} XP
+              {xpFlash.hints > 0
+                ? ` · base ${xpFlash.base}, ${xpFlash.hints} hint tier${xpFlash.hints > 1 ? 's' : ''}`
+                : ''}
+              {xpFlash.cleanBonus ? ' · clean run bonus' : ''}
+            </p>
+          </div>
+        ) : null}
+        {nearMissNote ? (
+          <p className="quiz-near-miss muted small" role="status">
+            {nearMissNote}
+          </p>
+        ) : null}
         <div className="quiz-body">
           <p className="quiz-prompt">{currentPuzzle.prompt}</p>
-          {currentPuzzle.hint ? (
-            <aside className="quiz-hint">
-              <span className="quiz-hint-label mono">{ui.hintLabel}</span>
-              <p className="quiz-hint-text mono">{currentPuzzle.hint}</p>
-            </aside>
+          {effectiveHintTotal > 0 ? (
+            <div className="quiz-hint-reveal-block">
+              {revealedHints.length > 0 ? (
+                <ol className="quiz-hint-stack" aria-label="Revealed hints">
+                  {revealedHints.map((h, idx) => (
+                    <li key={`${idx}-${h.slice(0, 24)}`} className="quiz-hint-tier">
+                      <span className="quiz-hint-tier-label mono">
+                        {ui.hintLabel} {idx + 1}/{effectiveHintTotal}
+                      </span>
+                      <p className="quiz-hint-tier-text">{h}</p>
+                    </li>
+                  ))}
+                </ol>
+              ) : null}
+              <div className="quiz-hint-meta">
+                <p className="quiz-hint-xp-line mono small muted">
+                  {hintTier > 0
+                    ? `Projected XP if solved now: ${hintProjectedXp} (max ${hintBaseXp})`
+                    : `Max XP for this step: ${hintBaseXp}`}
+                </p>
+                <p className="quiz-hint-xp-note small muted">{ui.hintXpNote}</p>
+                {hintUiError ? (
+                  <p className="mono error small quiz-hint-err" role="alert">
+                    {hintUiError}
+                  </p>
+                ) : null}
+                <button
+                  type="button"
+                  className="ghost-btn mono quiz-hint-reveal-btn"
+                  disabled={!canRevealMore || hintRevealBusy}
+                  onClick={() => void onRevealNextHint()}
+                >
+                  {hintRevealBusy ? ui.submitBusyLabel : ui.hintRevealLabel}
+                  <span className="quiz-hint-reveal-count" aria-hidden>
+                    {' '}
+                    ({hintTier}/{effectiveHintTotal})
+                  </span>
+                </button>
+              </div>
+            </div>
           ) : null}
 
           {isChoice ? (
@@ -299,7 +649,9 @@ export function QuestRunner({ summary, onDone }: Props) {
               ) : null}
               {puzzleError ? (
                 <p className="mono error small" role="alert">
-                  {puzzleError}
+                  {puzzleError === 'no_lives'
+                    ? 'No charges left. Wait for the next regen.'
+                    : puzzleError}
                 </p>
               ) : null}
               <div className="choice-grid">
@@ -308,44 +660,73 @@ export function QuestRunner({ summary, onDone }: Props) {
                   key={c}
                   type="button"
                   className={`choice-btn mono ${choiceConfirm === c ? 'choice-btn--armed' : ''}`}
-                  disabled={busy}
-                  onClick={() => {
-                    void (async () => {
-                      setPuzzleError(null)
-                      if (isSingleAttemptChoice) {
-                        if (choiceConfirm !== c) {
-                          setChoiceConfirm(c)
-                          return
-                        }
-                      }
+                  disabled={busy || liveHud.lives < 1}
+            onClick={() => {
+              void (async () => {
+                setPuzzleError(null)
+                setNearMissNote(null)
+                if (liveHud.lives < 1) {
+                  setPuzzleError('no_lives')
+                  return
+                }
+                if (isSingleAttemptChoice) {
+                  if (choiceConfirm !== c) {
+                    setChoiceConfirm(c)
+                    return
+                  }
+                }
 
-                      setAttempt(c)
-                      setBusy(true)
-                      const res = await submitPuzzleAnswer(summary.id, currentPuzzle.id, c)
-                      setBusy(false)
+                setAttempt(c)
+                setBusy(true)
+                const res = await submitPuzzleAnswer(summary.id, currentPuzzle.id, c)
+                setBusy(false)
+                applyLivesFromSubmit(res)
+                await refreshProfile()
 
-                      if (res.error) {
-                        setPuzzleError(res.error)
-                        setShake(true)
-                        window.setTimeout(() => setShake(false), 420)
-                        return
-                      }
+                if (res.error === 'wrong_order') {
+                  setShake(true)
+                  window.setTimeout(() => setShake(false), 420)
+                  return
+                }
 
-                      if (!res.correct) {
-                        setShake(true)
-                        window.setTimeout(() => setShake(false), 420)
-                        if (res.fatal) {
-                          await reloadProgress()
-                          await refreshProfile()
-                        }
-                        return
-                      }
+                if (res.error === 'no_lives') {
+                  setPuzzleError('no_lives')
+                  setShake(true)
+                  window.setTimeout(() => setShake(false), 420)
+                  return
+                }
 
-                      setChoiceConfirm(null)
-                      await reloadProgress()
-                      await refreshProfile()
-                    })()
-                  }}
+                if (res.error) {
+                  setPuzzleError(res.error)
+                  setShake(true)
+                  window.setTimeout(() => setShake(false), 420)
+                  return
+                }
+
+                if (!res.correct) {
+                  setNearMissNote(res.nearMiss ?? null)
+                  setShake(true)
+                  window.setTimeout(() => setShake(false), 420)
+                  if (res.fatal) {
+                    await reloadProgress()
+                    await refreshProfile()
+                  }
+                  return
+                }
+
+                if (res.xpAwarded != null) {
+                  pushXpFlash({
+                    xp: res.xpAwarded,
+                    base: res.xpBase ?? 25,
+                    hints: res.hintsUsed ?? 0,
+                    cleanBonus: res.cleanSolveBonus === true,
+                  })
+                }
+                setChoiceConfirm(null)
+                await reloadProgress()
+                await refreshProfile()
+              })()
+            }}
                 >
                   <span className="choice-index mono" aria-hidden>
                     {(i + 1).toString().padStart(2, '0')}
@@ -369,14 +750,21 @@ export function QuestRunner({ summary, onDone }: Props) {
                   placeholder={ui.answerPlaceholder}
                   autoComplete="off"
                   spellCheck={false}
+                  disabled={liveHud.lives < 1}
                 />
-                <button type="submit" className="primary-btn mono quiz-submit-btn" disabled={busy}>
+                <button
+                  type="submit"
+                  className="primary-btn mono quiz-submit-btn"
+                  disabled={busy || liveHud.lives < 1}
+                >
                   {busy ? ui.submitBusyLabel : ui.submitLabel}
                 </button>
               </div>
               {puzzleError ? (
                 <p className="mono error small" role="alert">
-                  {puzzleError}
+                  {puzzleError === 'no_lives'
+                    ? 'No charges left. Wait for the next regen.'
+                    : puzzleError}
                 </p>
               ) : null}
             </form>
