@@ -72,6 +72,7 @@ export function ProfilePage() {
   const [pushAlertsOn, setPushAlertsOn] = useState(false)
   const [pushAlertsBusy, setPushAlertsBusy] = useState(false)
   const [pushAlertsErr, setPushAlertsErr] = useState<string | null>(null)
+  const [feedback, setFeedback] = useState<{ kind: 'success' | 'error'; message: string } | null>(null)
 
   const showIosPwaPushHint = useMemo(
     () => typeof navigator !== 'undefined' && /iPhone|iPad|iPod/.test(navigator.userAgent),
@@ -175,9 +176,29 @@ export function ProfilePage() {
   }, [board, profile?.hunter_name])
 
   const callsign = profile?.hunter_name?.trim()
+  const initials = (callsign || user?.email || '?')
+    .split(/[\s@._-]+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((s) => s[0]?.toUpperCase() ?? '')
+    .join('')
+    .slice(0, 2)
   const xpTotal = profile?.xp ?? 0
   const livesNow = profile?.lives
   const livesMax = 5
+
+  const milestonePills = useMemo(() => {
+    const pills: { key: string; label: string }[] = []
+    if (finaleRows.length >= 1) pills.push({ key: 'first-finale', label: 'First finale' })
+    const paths = new Set<'control' | 'observe' | 'influence'>()
+    for (const row of finaleRows) {
+      const k = branchKey(row.branch)
+      if (k === 'control' || k === 'observe' || k === 'influence') paths.add(k)
+    }
+    if (paths.size >= 3) pills.push({ key: 'triad', label: 'All three paths' })
+    if (xpTotal >= 500) pills.push({ key: 'seasoned', label: 'Seasoned hunter' })
+    return pills
+  }, [finaleRows, xpTotal])
 
   async function saveHunterName(e: FormEvent) {
     e.preventDefault()
@@ -188,6 +209,7 @@ export function ProfilePage() {
     const name = hunterName.trim()
     if (!name) {
       setError('Choose a display name.')
+      setFeedback({ kind: 'error', message: 'Choose a display name before saving.' })
       setSaving(false)
       return
     }
@@ -201,8 +223,10 @@ export function ProfilePage() {
       setSaving(false)
       if (err.code === '23505') {
         setError('That display name is already taken.')
+        setFeedback({ kind: 'error', message: 'Display name already taken.' })
       } else {
         setError(err.message)
+        setFeedback({ kind: 'error', message: err.message })
       }
       return
     }
@@ -221,6 +245,7 @@ export function ProfilePage() {
 
     await refreshProfile()
     setBoard(await fetchLeaderboard(25))
+    setFeedback({ kind: 'success', message: 'Callsign saved.' })
   }
 
   const toggleProjectPushAlerts = useCallback(async () => {
@@ -234,14 +259,36 @@ export function ProfilePage() {
     setPushAlertsBusy(false)
     if (!res.ok) {
       setPushAlertsErr(res.message ?? 'Kon push niet bijwerken.')
+      setFeedback({ kind: 'error', message: res.message ?? 'Push preferences could not be updated.' })
       return
     }
     setPushAlertsOn(nextOn)
+    setFeedback({
+      kind: 'success',
+      message: nextOn ? 'Project notifications enabled.' : 'Project notifications disabled.',
+    })
   }, [pushAlertsOn, user?.id])
+
+  useEffect(() => {
+    if (!feedback) return
+    const t = window.setTimeout(() => setFeedback(null), 2600)
+    return () => window.clearTimeout(t)
+  }, [feedback])
 
   return (
     <section className="panel profile-page">
+      {feedback ? (
+        <p
+          className={`mono small app-toast ${feedback.kind === 'success' ? 'app-toast--success' : 'app-toast--error'}`}
+          role="status"
+        >
+          {feedback.message}
+        </p>
+      ) : null}
       <header className="profile-hero">
+        <span className="profile-avatar mono" aria-hidden>
+          {initials || '?'}
+        </span>
         <p className="profile-hero-tag mono">Operator file</p>
         <h1 className="profile-hero-title">{callsign || 'Unsigned operator'}</h1>
         <p className="profile-hero-email mono small muted">
@@ -291,6 +338,24 @@ export function ProfilePage() {
           </span>
         </article>
       </div>
+
+      <section className="profile-card profile-card--milestones">
+        <h2 className="profile-card-title mono">Milestones</h2>
+        <p className="muted small profile-card-lede">Light recognition — no grind.</p>
+        {finaleLoading ? (
+          <p className="muted small mono">Loading…</p>
+        ) : milestonePills.length === 0 ? (
+          <p className="muted small">Finish a dossier finale to earn your first badge.</p>
+        ) : (
+          <ul className="profile-milestone-list" aria-label="Milestones">
+            {milestonePills.map((p) => (
+              <li key={p.key} className="profile-milestone-pill mono small">
+                {p.label}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       <div className="profile-layout">
         <div className="profile-main">

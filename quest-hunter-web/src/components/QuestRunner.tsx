@@ -10,6 +10,8 @@ import {
   submitPuzzleAnswer,
 } from '../lib/questPlay'
 import { mergeQuestUi } from '../lib/questUiDefaults'
+import { formatPlayerFacingRpcError } from '../lib/networkErrors'
+import { pulseCorrect, pulseWrong } from '../lib/playerFeedback'
 import type { PlayerQuestPayload, QuestSummary } from '../types/quest'
 import { useAuth } from '../contexts/AuthContext'
 
@@ -26,6 +28,11 @@ function hintRpcErrorMessage(code: string): string {
     default:
       return code
   }
+}
+
+function puzzleErrorDisplay(raw: string): string {
+  if (raw === 'no_lives') return raw
+  return formatPlayerFacingRpcError(raw)
 }
 
 function formatLivesCountdown(iso: string | null | undefined): string | null {
@@ -49,6 +56,10 @@ export function QuestRunner({ summary, onDone }: Props) {
   const { user, refreshProfile } = useAuth()
   const [payload, setPayload] = useState<PlayerQuestPayload | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
+  const [retryTick, setRetryTick] = useState(0)
+  const [online, setOnline] = useState(
+    typeof navigator !== 'undefined' ? navigator.onLine : true,
+  )
   const [busy, setBusy] = useState(false)
   const [shake, setShake] = useState(false)
   const [attempt, setAttempt] = useState('')
@@ -74,6 +85,7 @@ export function QuestRunner({ summary, onDone }: Props) {
     base: number
     hints: number
     cleanBonus?: boolean
+    chargesAfter?: number
   } | null>(null)
   const [nearMissNote, setNearMissNote] = useState<string | null>(null)
   const [finaleXpFlash, setFinaleXpFlash] = useState<number | null>(null)
@@ -84,8 +96,10 @@ export function QuestRunner({ summary, onDone }: Props) {
   const [hintProjectedXp, setHintProjectedXp] = useState(25)
   const [hintRevealBusy, setHintRevealBusy] = useState(false)
   const [hintUiError, setHintUiError] = useState<string | null>(null)
+  const [feedbackPulse, setFeedbackPulse] = useState<'success' | 'error' | null>(null)
 
   const xpFlashClearRef = useRef(0)
+  const pulseClearRef = useRef(0)
 
   const [prog, setProg] = useState<{
     step: number
@@ -158,13 +172,36 @@ export function QuestRunner({ summary, onDone }: Props) {
   }, [])
 
   const pushXpFlash = useCallback(
-    (award: { xp: number; base: number; hints: number; cleanBonus?: boolean }) => {
+    (award: {
+      xp: number
+      base: number
+      hints: number
+      cleanBonus?: boolean
+      chargesAfter?: number
+    }) => {
       window.clearTimeout(xpFlashClearRef.current)
       setXpFlash(award)
-      xpFlashClearRef.current = window.setTimeout(() => setXpFlash(null), 2800)
+      xpFlashClearRef.current = window.setTimeout(() => setXpFlash(null), 3200)
     },
     [],
   )
+
+  const triggerFeedbackPulse = useCallback((kind: 'success' | 'error') => {
+    window.clearTimeout(pulseClearRef.current)
+    setFeedbackPulse(kind)
+    pulseClearRef.current = window.setTimeout(() => setFeedbackPulse(null), 420)
+  }, [])
+
+  useEffect(() => {
+    const onUp = () => setOnline(true)
+    const onDown = () => setOnline(false)
+    window.addEventListener('online', onUp)
+    window.addEventListener('offline', onDown)
+    return () => {
+      window.removeEventListener('online', onUp)
+      window.removeEventListener('offline', onDown)
+    }
+  }, [])
 
   useEffect(() => {
     const id = window.setInterval(() => setClockTick((n) => n + 1), 1000)
@@ -183,6 +220,10 @@ export function QuestRunner({ summary, onDone }: Props) {
 
   useEffect(() => {
     return () => window.clearTimeout(xpFlashClearRef.current)
+  }, [])
+
+  useEffect(() => {
+    return () => window.clearTimeout(pulseClearRef.current)
   }, [])
 
   useEffect(() => {
@@ -213,7 +254,7 @@ export function QuestRunner({ summary, onDone }: Props) {
     return () => {
       cancelled = true
     }
-  }, [summary.id, reloadProgress])
+  }, [summary.id, reloadProgress, retryTick])
 
   useEffect(() => {
     if (!payload) return
@@ -328,6 +369,8 @@ export function QuestRunner({ summary, onDone }: Props) {
     await refreshProfile()
 
     if (res.error === 'wrong_order') {
+      pulseWrong()
+      triggerFeedbackPulse('error')
       setShake(true)
       window.setTimeout(() => setShake(false), 420)
       setAttempt('')
@@ -335,6 +378,8 @@ export function QuestRunner({ summary, onDone }: Props) {
     }
 
     if (res.error === 'no_lives') {
+      pulseWrong()
+      triggerFeedbackPulse('error')
       setPuzzleError('no_lives')
       setShake(true)
       window.setTimeout(() => setShake(false), 420)
@@ -343,7 +388,9 @@ export function QuestRunner({ summary, onDone }: Props) {
     }
 
     if (res.error) {
-      setPuzzleError(res.error)
+      pulseWrong()
+      triggerFeedbackPulse('error')
+      setPuzzleError(puzzleErrorDisplay(res.error))
       setShake(true)
       window.setTimeout(() => setShake(false), 420)
       setAttempt('')
@@ -351,6 +398,8 @@ export function QuestRunner({ summary, onDone }: Props) {
     }
 
     if (!res.correct) {
+      pulseWrong()
+      triggerFeedbackPulse('error')
       setNearMissNote(res.nearMiss ?? null)
       setShake(true)
       window.setTimeout(() => setShake(false), 420)
@@ -362,12 +411,15 @@ export function QuestRunner({ summary, onDone }: Props) {
       return
     }
 
+    pulseCorrect()
+    triggerFeedbackPulse('success')
     if (res.xpAwarded != null) {
       pushXpFlash({
         xp: res.xpAwarded,
         base: res.xpBase ?? 25,
         hints: res.hintsUsed ?? 0,
         cleanBonus: res.cleanSolveBonus === true,
+        chargesAfter: res.lives,
       })
     }
     setAttempt('')
@@ -381,9 +433,12 @@ export function QuestRunner({ summary, onDone }: Props) {
     const err = await submitFinale(summary.id, choice)
     setBusy(false)
     if (err.error) {
-      setFinaleError(err.error)
+      triggerFeedbackPulse('error')
+      setFinaleError(formatPlayerFacingRpcError(err.error))
       return
     }
+    pulseCorrect()
+    triggerFeedbackPulse('success')
     if (err.xpAwarded != null) {
       setFinaleXpFlash(err.xpAwarded)
     }
@@ -401,19 +456,38 @@ export function QuestRunner({ summary, onDone }: Props) {
   }, [])
 
   if (loadError) {
+    const loadMsg =
+      loadError === 'not_available'
+        ? 'This dossier is sealed or outside the active window.'
+        : loadError === 'not_found'
+          ? 'Quest not found.'
+          : loadError === 'auth'
+            ? 'Session lost.'
+            : loadError === 'payload' || loadError === 'empty_payload'
+              ? 'Could not load dossier data. Try again.'
+              : formatPlayerFacingRpcError(loadError)
+    const canRetry =
+      loadError !== 'not_available' &&
+      loadError !== 'not_found' &&
+      loadError !== 'auth'
     return (
-      <article className={`quest-terminal quiz-surface quiz-error ${shake ? 'shake' : ''}`}>
+      <article
+        className={`quest-terminal quiz-surface quiz-error ${shake ? 'shake' : ''} ${
+          feedbackPulse ? `feedback-pulse feedback-pulse--${feedbackPulse}` : ''
+        }`}
+      >
         <div className="quiz-error-inner">
           <p className="quiz-error-label mono">Signal interrupted</p>
-          <p className="quiz-error-msg">
-            {loadError === 'not_available'
-              ? 'This dossier is sealed or outside the active window.'
-              : loadError === 'not_found'
-                ? 'Quest not found.'
-                : loadError === 'auth'
-                  ? 'Session lost.'
-                  : `Signal lost: ${loadError}`}
-          </p>
+          <p className="quiz-error-msg">{loadMsg}</p>
+          {canRetry ? (
+            <button
+              type="button"
+              className="primary-btn mono quiz-error-retry"
+              onClick={() => setRetryTick((n) => n + 1)}
+            >
+              Try again
+            </button>
+          ) : null}
         </div>
       </article>
     )
@@ -491,7 +565,11 @@ export function QuestRunner({ summary, onDone }: Props) {
 
   if (phase === 'failed') {
     return (
-      <article className={`quest-terminal quiz-surface quiz-error ${shake ? 'shake' : ''}`}>
+      <article
+        className={`quest-terminal quiz-surface quiz-error ${shake ? 'shake' : ''} ${
+          feedbackPulse ? `feedback-pulse feedback-pulse--${feedbackPulse}` : ''
+        }`}
+      >
         <div className="quiz-error-inner">
           <p className="quiz-error-label mono">Dossier sealed</p>
           <p className="quiz-error-msg">
@@ -541,7 +619,7 @@ export function QuestRunner({ summary, onDone }: Props) {
                 const r = await ackQuestPreFinale(summary.id)
                 setBusy(false)
                 if (r.error) {
-                  setFinaleError(r.error)
+                  setFinaleError(formatPlayerFacingRpcError(r.error))
                   return
                 }
                 await reloadProgress()
@@ -566,15 +644,35 @@ export function QuestRunner({ summary, onDone }: Props) {
     const isFatalChoice = Boolean(isChoice && currentPuzzle.fatalWrong)
 
     const progressPct = puzzles.length > 0 ? ((step + 1) / puzzles.length) * 100 : 0
+    const progressMax = Math.max(puzzles.length, 1)
     const hintCountPayload = currentPuzzle.hintCount ?? 0
     const effectiveHintTotal = hintTotal > 0 ? hintTotal : hintCountPayload
     const canRevealMore = effectiveHintTotal > 0 && hintTier < effectiveHintTotal
 
     return (
-      <article className={`quest-terminal quiz-surface ${shake ? 'shake glitch-border' : ''}`}>
-        <div className="quiz-progress-track" aria-hidden>
+      <article
+        className={`quest-terminal quiz-surface ${shake ? 'shake glitch-border' : ''} ${
+          feedbackPulse ? `feedback-pulse feedback-pulse--${feedbackPulse}` : ''
+        }`}
+      >
+        {!online ? (
+          <p className="quiz-offline-banner mono small" role="status">
+            Offline — submissions may fail until you reconnect.
+          </p>
+        ) : null}
+        <div
+          className="quiz-progress-track"
+          role="progressbar"
+          aria-valuemin={1}
+          aria-valuemax={progressMax}
+          aria-valuenow={step + 1}
+          aria-label={`Dossier steps: ${step + 1} of ${puzzles.length}`}
+        >
           <div className="quiz-progress-fill" style={{ width: `${progressPct}%` }} />
         </div>
+        <p className="quiz-progress-caption mono small muted">
+          Step {step + 1} of {puzzles.length} · dossier puzzles
+        </p>
         <header className="quiz-head mono">
           <span className="quiz-head-badge">{ui.challengeBadge}</span>
           <span className="quiz-head-step">
@@ -616,12 +714,17 @@ export function QuestRunner({ summary, onDone }: Props) {
         {xpFlash ? (
           <div className="quiz-xp-flash-wrap" role="status" aria-live="polite">
             <p className="quiz-xp-flash mono small">
-              +{xpFlash.xp} XP
+              Step cleared · +{xpFlash.xp} XP
               {xpFlash.hints > 0
                 ? ` · base ${xpFlash.base}, ${xpFlash.hints} hint tier${xpFlash.hints > 1 ? 's' : ''}`
                 : ''}
               {xpFlash.cleanBonus ? ' · clean run bonus' : ''}
             </p>
+            {xpFlash.chargesAfter !== undefined ? (
+              <p className="quiz-xp-recap mono small muted">
+                {xpFlash.chargesAfter} charge{xpFlash.chargesAfter === 1 ? '' : 's'} left
+              </p>
+            ) : null}
           </div>
         ) : null}
         {nearMissNote ? (
@@ -688,7 +791,7 @@ export function QuestRunner({ summary, onDone }: Props) {
                 <p className="mono error small" role="alert">
                   {puzzleError === 'no_lives'
                     ? 'No charges left. Wait for the next regen.'
-                    : puzzleError}
+                    : puzzleErrorDisplay(puzzleError)}
                 </p>
               ) : null}
               <div className="choice-grid">
@@ -721,12 +824,16 @@ export function QuestRunner({ summary, onDone }: Props) {
                 await refreshProfile()
 
                 if (res.error === 'wrong_order') {
+                  pulseWrong()
+                  triggerFeedbackPulse('error')
                   setShake(true)
                   window.setTimeout(() => setShake(false), 420)
                   return
                 }
 
                 if (res.error === 'no_lives') {
+                  pulseWrong()
+                  triggerFeedbackPulse('error')
                   setPuzzleError('no_lives')
                   setShake(true)
                   window.setTimeout(() => setShake(false), 420)
@@ -734,13 +841,17 @@ export function QuestRunner({ summary, onDone }: Props) {
                 }
 
                 if (res.error) {
-                  setPuzzleError(res.error)
+                  pulseWrong()
+                  triggerFeedbackPulse('error')
+                  setPuzzleError(puzzleErrorDisplay(res.error))
                   setShake(true)
                   window.setTimeout(() => setShake(false), 420)
                   return
                 }
 
                 if (!res.correct) {
+                  pulseWrong()
+                  triggerFeedbackPulse('error')
                   setNearMissNote(res.nearMiss ?? null)
                   setShake(true)
                   window.setTimeout(() => setShake(false), 420)
@@ -751,12 +862,15 @@ export function QuestRunner({ summary, onDone }: Props) {
                   return
                 }
 
+                pulseCorrect()
+                triggerFeedbackPulse('success')
                 if (res.xpAwarded != null) {
                   pushXpFlash({
                     xp: res.xpAwarded,
                     base: res.xpBase ?? 25,
                     hints: res.hintsUsed ?? 0,
                     cleanBonus: res.cleanSolveBonus === true,
+                    chargesAfter: res.lives,
                   })
                 }
                 setChoiceConfirm(null)
@@ -801,7 +915,7 @@ export function QuestRunner({ summary, onDone }: Props) {
                 <p className="mono error small" role="alert">
                   {puzzleError === 'no_lives'
                     ? 'No charges left. Wait for the next regen.'
-                    : puzzleError}
+                    : puzzleErrorDisplay(puzzleError)}
                 </p>
               ) : null}
             </form>
@@ -812,7 +926,11 @@ export function QuestRunner({ summary, onDone }: Props) {
   }
 
   return (
-    <article className={`quest-terminal quiz-surface quiz-finale-shell finale ${shake ? 'shake' : ''}`}>
+    <article
+      className={`quest-terminal quiz-surface quiz-finale-shell finale ${shake ? 'shake' : ''} ${
+        feedbackPulse ? `feedback-pulse feedback-pulse--${feedbackPulse}` : ''
+      }`}
+    >
       <header className="quiz-head mono quiz-head-finale">
         <span className="quiz-head-badge quiz-head-badge-finale">{ui.finaleBadge}</span>
         <span className="quiz-head-step">{ui.finaleHeadline}</span>

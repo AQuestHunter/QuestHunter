@@ -9,6 +9,7 @@ import {
   setPlayerCampaignSlugPreference,
   type ActivePlayerCampaign,
 } from '../lib/questPlay'
+import { dossierWindowHint } from '../lib/questWindowLabel'
 import type { QuestSummary, ResolvedQuestStatus } from '../types/quest'
 import { useAuth } from '../contexts/AuthContext'
 
@@ -25,6 +26,10 @@ function resolvedMessage(status: ResolvedQuestStatus): string | null {
 export function QuestsPage() {
   const { profile } = useAuth()
   const [campaignSlug, setCampaignSlug] = useState(() => getPlayerCampaignSlugForPlay())
+  const [density, setDensity] = useState<'expanded' | 'compact'>(() => {
+    if (typeof window === 'undefined') return 'expanded'
+    return window.localStorage.getItem('qh-density') === 'compact' ? 'compact' : 'expanded'
+  })
   const [campaignChoices, setCampaignChoices] = useState<ActivePlayerCampaign[]>([])
   const [quest, setQuest] = useState<QuestSummary | null>(null)
   const [resolveStatus, setResolveStatus] = useState<ResolvedQuestStatus>('none')
@@ -83,8 +88,15 @@ export function QuestsPage() {
   const showIdleCard = !quest && !needsName && !message && !loading
   const showWaitingOrComplete = showIdleCard && waitCopy
 
+  const dossierWindowCopy = useMemo(() => (quest ? dossierWindowHint(quest) : null), [quest])
+  const isCompact = density === 'compact'
+
+  useEffect(() => {
+    window.localStorage.setItem('qh-density', density)
+  }, [density])
+
   return (
-    <section className="panel quests-page">
+    <section className={`panel quests-page ${isCompact ? 'quests-page--compact' : ''}`}>
       <div className="hero-block hero-glitch">
         <p className="mono hero-tag flicker">HET GEBROKEN SIGNAAL</p>
         <h1>Active dossier</h1>
@@ -93,6 +105,47 @@ export function QuestsPage() {
           window globally when using the default campaign).
         </p>
       </div>
+      <div className="quests-display-bar">
+        <span className="mono muted small">Card density</span>
+        <div className="quests-density-toggle" role="group" aria-label="Quest card density">
+          <button
+            type="button"
+            className={`ghost-btn mono small quests-density-btn ${!isCompact ? 'quests-density-btn--active' : ''}`}
+            onClick={() => setDensity('expanded')}
+            aria-pressed={!isCompact}
+          >
+            Expanded
+          </button>
+          <button
+            type="button"
+            className={`ghost-btn mono small quests-density-btn ${isCompact ? 'quests-density-btn--active' : ''}`}
+            onClick={() => setDensity('compact')}
+            aria-pressed={isCompact}
+          >
+            Compact
+          </button>
+        </div>
+      </div>
+      {campaignChoices.length > 0 ? (
+        <div className="campaign-progress" aria-label="Active campaign list">
+          <p className="mono muted small campaign-progress-label">
+            Active campaigns · {campaignChoices.length}
+          </p>
+          <div className="campaign-progress-track" role="list">
+            {campaignChoices.map((c) => (
+              <span
+                key={c.slug}
+                role="listitem"
+                className={`campaign-progress-chip ${c.slug === campaignSlug ? 'campaign-progress-chip--active' : ''}`}
+                title={c.label}
+              >
+                <span className="campaign-progress-dot" aria-hidden />
+                <span className="campaign-progress-name">{c.label}</span>
+              </span>
+            ))}
+          </div>
+        </div>
+      ) : null}
 
       {!needsName && showProjectPicker ? (
         <label className="field quest-project-picker mono small">
@@ -144,17 +197,28 @@ export function QuestsPage() {
       ) : null}
 
       {loading ? (
-        <p className="mono muted">tuning frequency …</p>
+        <article className="quest-card quest-loading-skeleton" aria-hidden>
+          <div className="skeleton-line skeleton-line--title" />
+          <div className="skeleton-line" />
+          <div className="skeleton-line skeleton-line--short" />
+          <div className="skeleton-block" />
+        </article>
       ) : message ? (
-        <p className="mono error">{message}</p>
+        <p className="mono error quest-feedback quest-feedback--error">{message}</p>
       ) : quest && !needsName ? (
-        <div className="quest-stack">
+        <div className={`quest-stack ${isCompact ? 'quest-stack--compact' : ''}`}>
           <article className="dossier-strip mono">
+            <span className="muted dossier-meta">LIVE</span>
+            <span className="quest-status-badge quest-status-badge--live">In window</span>
+            <span className="muted dossier-meta">///</span>
             <span className="muted dossier-meta">FILE</span>
             <span className="accent-strong dossier-slug">{quest.slug}</span>
             <span className="muted dossier-meta">///</span>
             <span className="dossier-title">{quest.title}</span>
           </article>
+          {dossierWindowCopy ? (
+            <p className="dossier-window-hint mono small muted">{dossierWindowCopy}</p>
+          ) : null}
           <QuestRunner summary={quest} onDone={() => void loadQuest()} />
         </div>
       ) : showIdleCard ? (
@@ -163,10 +227,18 @@ export function QuestsPage() {
             <h2 className="mono small">
               {resolveStatus === 'waiting_next' ? 'Standing by' : 'Campaign arc'}
             </h2>
+            <p className="quest-status-line">
+              <span className="quest-status-badge quest-status-badge--standby">
+                {resolveStatus === 'waiting_next' ? 'Standby' : 'Complete'}
+              </span>
+            </p>
             <p className="muted">{waitCopy}</p>
           </article>
         ) : (
           <article className="quest-card empty">
+            <p className="quest-empty-illustration" aria-hidden>
+              // NO SIGNAL //
+            </p>
             <h2>No live quest</h2>
             <p className="muted">
               Publish a windowed quest in Admin (start ≤ now, end unset or future). Ensure migrations with RPCs are

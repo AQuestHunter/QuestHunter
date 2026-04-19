@@ -6,11 +6,19 @@ export function AppLayout() {
   const { signOut, isAdmin, profile, user } = useAuth()
   const location = useLocation()
   const [menuOpen, setMenuOpen] = useState(false)
+  const [theme, setTheme] = useState<'dark' | 'dim'>(() => {
+    if (typeof window === 'undefined') return 'dark'
+    return window.localStorage.getItem('qh-theme') === 'dim' ? 'dim' : 'dark'
+  })
 
   const displayName =
     profile?.hunter_name?.trim() ||
     (typeof user?.user_metadata?.display_name === 'string' ? user.user_metadata.display_name.trim() : '') ||
     ''
+  const navInitial = (displayName || user?.email || '?')
+    .trim()
+    .slice(0, 1)
+    .toUpperCase()
 
   useEffect(() => {
     setMenuOpen(false)
@@ -25,6 +33,11 @@ export function AppLayout() {
     }
   }, [menuOpen])
 
+  useEffect(() => {
+    document.documentElement.setAttribute('data-ui-theme', theme)
+    window.localStorage.setItem('qh-theme', theme)
+  }, [theme])
+
   const closeMenu = () => setMenuOpen(false)
 
   const navClass = ({ isActive }: { isActive: boolean }) =>
@@ -36,6 +49,17 @@ export function AppLayout() {
         <NavLink to="/quests" className="brand mono" onClick={closeMenu}>
           QUEST HUNTER
         </NavLink>
+        <span className="top-avatar mono" aria-hidden>
+          {navInitial}
+        </span>
+        <button
+          type="button"
+          className="ghost-btn mono small top-theme-btn"
+          onClick={() => setTheme((prev) => (prev === 'dark' ? 'dim' : 'dark'))}
+          aria-label="Toggle interface theme"
+        >
+          {theme === 'dark' ? 'Dim' : 'Dark'}
+        </button>
 
         <button
           type="button"
