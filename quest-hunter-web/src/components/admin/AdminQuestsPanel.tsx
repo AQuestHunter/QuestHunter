@@ -333,6 +333,31 @@ export function AdminQuestsPanel() {
 
   type QuestEditorTab = 'basics' | 'campaign' | 'story' | 'playerUi'
   const [editorTab, setEditorTab] = useState<QuestEditorTab>('basics')
+  const [simpleMode, setSimpleMode] = useState(true)
+
+  const editorTabs = useMemo(
+    () =>
+      (
+        simpleMode
+          ? [
+              ['basics', 'Step 1: Basics', 'Basics'],
+              ['story', 'Step 2: Story & puzzles', 'Story'],
+            ]
+          : [
+              ['basics', 'Basics', 'Basic'],
+              ['campaign', 'Campaign', 'Arc'],
+              ['story', 'Story & puzzles', 'Story'],
+              ['playerUi', 'Player UI', 'UI'],
+            ]
+      ) as readonly [QuestEditorTab, string, string][],
+    [simpleMode],
+  )
+
+  useEffect(() => {
+    if (simpleMode && editorTab !== 'basics' && editorTab !== 'story') {
+      setEditorTab('basics')
+    }
+  }, [simpleMode, editorTab])
 
   const loadRows = useCallback(async () => {
     setLoading(true)
@@ -1345,8 +1370,8 @@ export function AdminQuestsPanel() {
                 <button type="button" className="admin-quests-inline-link" onClick={() => resetForm()}>
                   New dossier
                 </button>
-                . Use the tabs below when editing — <span className="mono">Save dossier</span> stores everything at once.
-                To ship a whole project, use <span className="accent-strong">Publish all</span> under that project.
+                . Simple mode focuses on essentials first. Switch to Advanced mode for campaign branching and custom player
+                UI labels. <span className="mono">Save dossier</span> stores everything at once.
               </p>
             </div>
           ) : null}
@@ -1374,16 +1399,17 @@ export function AdminQuestsPanel() {
                     <span className="muted">id {editingId.slice(0, 8)}…</span>
                   </p>
                 ) : null}
+                <label className="field row-inline admin-editor-simple-toggle">
+                  <input
+                    type="checkbox"
+                    checked={simpleMode}
+                    onChange={(e) => setSimpleMode(e.target.checked)}
+                  />
+                  <span className="mono small">{simpleMode ? 'Simple mode' : 'Advanced mode'}</span>
+                </label>
               </div>
               <nav className="admin-editor-tabs" role="tablist" aria-label="Quest editor">
-                {(
-                  [
-                    ['basics', 'Basics', 'Basic'],
-                    ['campaign', 'Campaign', 'Arc'],
-                    ['story', 'Story & puzzles', 'Story'],
-                    ['playerUi', 'Player UI', 'UI'],
-                  ] as const
-                ).map(([id, label, short]) => (
+                {editorTabs.map(([id, label, short]) => (
                   <button
                     key={id}
                     type="button"
@@ -1451,7 +1477,7 @@ export function AdminQuestsPanel() {
                     <input type="checkbox" checked={isPublished} onChange={(e) => setIsPublished(e.target.checked)} />
                     <span className="mono small">Published</span>
                   </label>
-                  {editingId ? (
+                  {editingId && !simpleMode ? (
                     <label className="field row-inline">
                       <input
                         type="checkbox"
@@ -1473,20 +1499,46 @@ export function AdminQuestsPanel() {
                       required
                     />
                   </label>
-                  <label className="field">
-                    <span className="mono label-text">Ends at (optional)</span>
-                    <input
-                      className="terminal-input mono"
-                      type="datetime-local"
-                      value={endsAt}
-                      onChange={(e) => setEndsAt(e.target.value)}
-                    />
-                  </label>
+                  {!simpleMode ? (
+                    <label className="field">
+                      <span className="mono label-text">Ends at (optional)</span>
+                      <input
+                        className="terminal-input mono"
+                        type="datetime-local"
+                        value={endsAt}
+                        onChange={(e) => setEndsAt(e.target.value)}
+                      />
+                    </label>
+                  ) : null}
                 </div>
+                {simpleMode ? (
+                  <details className="admin-nested-details">
+                    <summary className="mono small admin-nested-summary">Advanced timing & lifecycle</summary>
+                    <label className="field">
+                      <span className="mono label-text">Ends at (optional)</span>
+                      <input
+                        className="terminal-input mono"
+                        type="datetime-local"
+                        value={endsAt}
+                        onChange={(e) => setEndsAt(e.target.value)}
+                      />
+                    </label>
+                    {editingId ? (
+                      <label className="field row-inline">
+                        <input
+                          type="checkbox"
+                          checked={archivedManual}
+                          onChange={(e) => setArchivedManual(e.target.checked)}
+                        />
+                        <span className="mono small">Archived</span>
+                      </label>
+                    ) : null}
+                  </details>
+                ) : null}
               </div>
             )}
 
-            {editorTab === 'campaign' && (
+            {editorTab === 'campaign' && !simpleMode && (
               <div
                 className="admin-editor-panel"
                 role="tabpanel"
@@ -1693,22 +1745,9 @@ export function AdminQuestsPanel() {
               Steps run in order. Answers stay server-side. Optional hints are tiered (players reveal one at a time; XP
               reduced per tier). Choice puzzles: comma-separated options.
             </p>
-            {puzzles.map((pz, idx) => (
+                {puzzles.map((pz, idx) => (
               <fieldset key={`${pz.id}-${idx}`} className="puzzle-fieldset">
                 <legend className="mono">Puzzle {idx + 1}</legend>
-                <label className="field">
-                  <span className="mono label-text">Id</span>
-                  <input
-                    className="terminal-input mono"
-                    value={pz.id}
-                    onChange={(e) => {
-                      const next = [...puzzles]
-                      next[idx] = { ...pz, id: e.target.value }
-                      setPuzzles(next)
-                    }}
-                    placeholder={`puzzle-${idx + 1}`}
-                  />
-                </label>
                 <label className="field">
                   <span className="mono label-text">Prompt</span>
                   <textarea
@@ -1723,56 +1762,6 @@ export function AdminQuestsPanel() {
                     required
                   />
                 </label>
-                <div className="field admin-hints-field">
-                  <span className="mono label-text">Hints (optional, tiered)</span>
-                  <span className="field-hint muted small">
-                    Shown one at a time in play. Each tier applies a cumulative XP penalty on that puzzle (see server).
-                  </span>
-                  {pz.hints.map((h, hIdx) => (
-                    <div key={hIdx} className="admin-hint-tier">
-                      <span className="mono small muted admin-hint-tier-label">Tier {hIdx + 1}</span>
-                      <input
-                        className="terminal-input mono"
-                        value={h}
-                        placeholder={`Hint tier ${hIdx + 1}`}
-                        onChange={(e) => {
-                          const next = [...puzzles]
-                          const nh = [...next[idx].hints]
-                          nh[hIdx] = e.target.value
-                          next[idx] = { ...pz, hints: nh }
-                          setPuzzles(next)
-                        }}
-                      />
-                      {pz.hints.length > 1 ? (
-                        <button
-                          type="button"
-                          className="ghost-btn mono small admin-hint-remove"
-                          onClick={() => {
-                            const next = [...puzzles]
-                            next[idx] = {
-                              ...pz,
-                              hints: pz.hints.filter((_, j) => j !== hIdx),
-                            }
-                            setPuzzles(next)
-                          }}
-                        >
-                          Remove tier
-                        </button>
-                      ) : null}
-                    </div>
-                  ))}
-                  <button
-                    type="button"
-                    className="ghost-btn mono small"
-                    onClick={() => {
-                      const next = [...puzzles]
-                      next[idx] = { ...pz, hints: [...pz.hints, ''] }
-                      setPuzzles(next)
-                    }}
-                  >
-                    + Add hint tier
-                  </button>
-                </div>
                 <label className="field">
                   <span className="mono label-text">Correct answer</span>
                   <input
@@ -1787,50 +1776,228 @@ export function AdminQuestsPanel() {
                     autoComplete="off"
                   />
                 </label>
-                <label className="field">
-                  <span className="mono label-text">XP override</span>
-                  <input
-                    className="terminal-input mono"
-                    inputMode="numeric"
-                    placeholder="default 25"
-                    value={pz.xp}
-                    onChange={(e) => {
-                      const next = [...puzzles]
-                      next[idx] = { ...pz, xp: e.target.value }
-                      setPuzzles(next)
-                    }}
-                  />
-                </label>
-                <label className="field">
-                  <span className="mono label-text">Input</span>
-                  <select
-                    className="terminal-input mono"
-                    value={pz.inputType}
-                    onChange={(e) => {
-                      const next = [...puzzles]
-                      next[idx] = { ...pz, inputType: e.target.value as PuzzleInputType }
-                      setPuzzles(next)
-                    }}
-                  >
-                    <option value="text">Free text</option>
-                    <option value="choice">Multiple choice</option>
-                  </select>
-                </label>
-                {pz.inputType === 'choice' ? (
-                  <label className="field">
-                    <span className="mono label-text">Choices (comma-separated)</span>
-                    <input
-                      className="terminal-input mono"
-                      value={pz.choices}
-                      onChange={(e) => {
-                        const next = [...puzzles]
-                        next[idx] = { ...pz, choices: e.target.value }
-                        setPuzzles(next)
-                      }}
-                      placeholder="ALPHA, BRAVO, CHARLIE"
-                    />
-                  </label>
-                ) : null}
+                {simpleMode ? (
+                  <details className="admin-nested-details">
+                    <summary className="mono small admin-nested-summary">Advanced puzzle settings</summary>
+                    <label className="field">
+                      <span className="mono label-text">Id</span>
+                      <input
+                        className="terminal-input mono"
+                        value={pz.id}
+                        onChange={(e) => {
+                          const next = [...puzzles]
+                          next[idx] = { ...pz, id: e.target.value }
+                          setPuzzles(next)
+                        }}
+                        placeholder={`puzzle-${idx + 1}`}
+                      />
+                    </label>
+                    <div className="field admin-hints-field">
+                      <span className="mono label-text">Hints (optional, tiered)</span>
+                      <span className="field-hint muted small">
+                        Shown one at a time in play. Each tier applies a cumulative XP penalty on that puzzle (see server).
+                      </span>
+                      {pz.hints.map((h, hIdx) => (
+                        <div key={hIdx} className="admin-hint-tier">
+                          <span className="mono small muted admin-hint-tier-label">Tier {hIdx + 1}</span>
+                          <input
+                            className="terminal-input mono"
+                            value={h}
+                            placeholder={`Hint tier ${hIdx + 1}`}
+                            onChange={(e) => {
+                              const next = [...puzzles]
+                              const nh = [...next[idx].hints]
+                              nh[hIdx] = e.target.value
+                              next[idx] = { ...pz, hints: nh }
+                              setPuzzles(next)
+                            }}
+                          />
+                          {pz.hints.length > 1 ? (
+                            <button
+                              type="button"
+                              className="ghost-btn mono small admin-hint-remove"
+                              onClick={() => {
+                                const next = [...puzzles]
+                                next[idx] = {
+                                  ...pz,
+                                  hints: pz.hints.filter((_, j) => j !== hIdx),
+                                }
+                                setPuzzles(next)
+                              }}
+                            >
+                              Remove tier
+                            </button>
+                          ) : null}
+                        </div>
+                      ))}
+                      <button
+                        type="button"
+                        className="ghost-btn mono small"
+                        onClick={() => {
+                          const next = [...puzzles]
+                          next[idx] = { ...pz, hints: [...pz.hints, ''] }
+                          setPuzzles(next)
+                        }}
+                      >
+                        + Add hint tier
+                      </button>
+                    </div>
+                    <label className="field">
+                      <span className="mono label-text">XP override</span>
+                      <input
+                        className="terminal-input mono"
+                        inputMode="numeric"
+                        placeholder="default 25"
+                        value={pz.xp}
+                        onChange={(e) => {
+                          const next = [...puzzles]
+                          next[idx] = { ...pz, xp: e.target.value }
+                          setPuzzles(next)
+                        }}
+                      />
+                    </label>
+                    <label className="field">
+                      <span className="mono label-text">Input</span>
+                      <select
+                        className="terminal-input mono"
+                        value={pz.inputType}
+                        onChange={(e) => {
+                          const next = [...puzzles]
+                          next[idx] = { ...pz, inputType: e.target.value as PuzzleInputType }
+                          setPuzzles(next)
+                        }}
+                      >
+                        <option value="text">Free text</option>
+                        <option value="choice">Multiple choice</option>
+                      </select>
+                    </label>
+                    {pz.inputType === 'choice' ? (
+                      <label className="field">
+                        <span className="mono label-text">Choices (comma-separated)</span>
+                        <input
+                          className="terminal-input mono"
+                          value={pz.choices}
+                          onChange={(e) => {
+                            const next = [...puzzles]
+                            next[idx] = { ...pz, choices: e.target.value }
+                            setPuzzles(next)
+                          }}
+                          placeholder="ALPHA, BRAVO, CHARLIE"
+                        />
+                      </label>
+                    ) : null}
+                  </details>
+                ) : (
+                  <>
+                    <label className="field">
+                      <span className="mono label-text">Id</span>
+                      <input
+                        className="terminal-input mono"
+                        value={pz.id}
+                        onChange={(e) => {
+                          const next = [...puzzles]
+                          next[idx] = { ...pz, id: e.target.value }
+                          setPuzzles(next)
+                        }}
+                        placeholder={`puzzle-${idx + 1}`}
+                      />
+                    </label>
+                    <div className="field admin-hints-field">
+                      <span className="mono label-text">Hints (optional, tiered)</span>
+                      <span className="field-hint muted small">
+                        Shown one at a time in play. Each tier applies a cumulative XP penalty on that puzzle (see server).
+                      </span>
+                      {pz.hints.map((h, hIdx) => (
+                        <div key={hIdx} className="admin-hint-tier">
+                          <span className="mono small muted admin-hint-tier-label">Tier {hIdx + 1}</span>
+                          <input
+                            className="terminal-input mono"
+                            value={h}
+                            placeholder={`Hint tier ${hIdx + 1}`}
+                            onChange={(e) => {
+                              const next = [...puzzles]
+                              const nh = [...next[idx].hints]
+                              nh[hIdx] = e.target.value
+                              next[idx] = { ...pz, hints: nh }
+                              setPuzzles(next)
+                            }}
+                          />
+                          {pz.hints.length > 1 ? (
+                            <button
+                              type="button"
+                              className="ghost-btn mono small admin-hint-remove"
+                              onClick={() => {
+                                const next = [...puzzles]
+                                next[idx] = {
+                                  ...pz,
+                                  hints: pz.hints.filter((_, j) => j !== hIdx),
+                                }
+                                setPuzzles(next)
+                              }}
+                            >
+                              Remove tier
+                            </button>
+                          ) : null}
+                        </div>
+                      ))}
+                      <button
+                        type="button"
+                        className="ghost-btn mono small"
+                        onClick={() => {
+                          const next = [...puzzles]
+                          next[idx] = { ...pz, hints: [...pz.hints, ''] }
+                          setPuzzles(next)
+                        }}
+                      >
+                        + Add hint tier
+                      </button>
+                    </div>
+                    <label className="field">
+                      <span className="mono label-text">XP override</span>
+                      <input
+                        className="terminal-input mono"
+                        inputMode="numeric"
+                        placeholder="default 25"
+                        value={pz.xp}
+                        onChange={(e) => {
+                          const next = [...puzzles]
+                          next[idx] = { ...pz, xp: e.target.value }
+                          setPuzzles(next)
+                        }}
+                      />
+                    </label>
+                    <label className="field">
+                      <span className="mono label-text">Input</span>
+                      <select
+                        className="terminal-input mono"
+                        value={pz.inputType}
+                        onChange={(e) => {
+                          const next = [...puzzles]
+                          next[idx] = { ...pz, inputType: e.target.value as PuzzleInputType }
+                          setPuzzles(next)
+                        }}
+                      >
+                        <option value="text">Free text</option>
+                        <option value="choice">Multiple choice</option>
+                      </select>
+                    </label>
+                    {pz.inputType === 'choice' ? (
+                      <label className="field">
+                        <span className="mono label-text">Choices (comma-separated)</span>
+                        <input
+                          className="terminal-input mono"
+                          value={pz.choices}
+                          onChange={(e) => {
+                            const next = [...puzzles]
+                            next[idx] = { ...pz, choices: e.target.value }
+                            setPuzzles(next)
+                          }}
+                          placeholder="ALPHA, BRAVO, CHARLIE"
+                        />
+                      </label>
+                    ) : null}
+                  </>
+                )}
                 <div className="puzzle-actions">
                   <button
                     type="button"
@@ -1856,7 +2023,7 @@ export function AdminQuestsPanel() {
               </div>
             )}
 
-            {editorTab === 'playerUi' && (
+            {editorTab === 'playerUi' && !simpleMode && (
               <div
                 className="admin-editor-panel admin-player-ui-tab"
                 role="tabpanel"

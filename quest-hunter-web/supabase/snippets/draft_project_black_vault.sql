@@ -1,11 +1,6 @@
--- PROJECT: DE KLUIS DIE NIET BESTAAT (Black Vault) — volledige story arc voor quest-hunter-web
--- Na migraties in Supabase SQL Editor draaien. Publiceer venster en next-quests in Admin zetten indien nodig.
---
--- Rules: 3 hint-tiers (richting → mechaniek → startpunt), wrongFeedback (near-miss), preFinale + finale,
--- minstens twee mechanic-categorieën per quest (encoding / logica / context / OSINT-feel / etc.).
--- Finale-paden: CONTROL / OBSERVE / INFLUENCE (verborgen assen voor campaigns).
---
--- Linear campaign: alle takken gaan naar dezelfde volgende quest (keuze beïnvloelt XP + hiddenAxes, niet routing).
+-- PROJECT: DE KLUIS DIE NIET BESTAAT (Black Vault) — vernieuwde arc (Q1..Q5)
+-- Gebaseerd op de aangeleverde campaign/system/quests spec, gemapt naar quest-hunter body schema.
+-- Na uitvoeren: publiceer vensters in Admin en zet next-quests live.
 
 insert into public.quests (slug, title, body, is_published, archived)
 values
@@ -14,59 +9,65 @@ values
     'De kluis die niet bestaat — Quest 1 — De kaart die niet bestaat',
     $json$
 {
-  "intro": "🔐 QUEST 1 — VOORBEREIDINGEN: DE KAART DIE NIET BESTAAT\n\nGerucht: een black vault — off-books, geen registratie. Jij krijgt drie bronnen die elkaar zouden moeten dekken… en dat doen ze niet.\n\n**Laag A — Fragment uit energie-dashboard (kWh / uur, peak):**\n```\n       1     2     3     4\nA     42    12     9    55\nB     18     0    41    20    ← rij B: kWh; 0 = ‘geen meting / leeg’\nC    cam   cam    ∅    cam   ← ∅ = geen camerastream (niet offline, bewust leeg)\nD     +1    +2    +6    +1    ← thermisch verschil (°C vs omgeving), laatste meetronde\n```\n**Laag B — Officieel plattegrond-label (zelfde rooster):** cellen met een naam op de getekende plaat: A1 LOBBY, B1 TRAP, A4 TRESOR, D4 ARCHIEF — alles behalve **B3** heeft een contour op de tekening. Cel **B3** staat op de plot als massieve muur.\n**Laag C — Interne mailtrail (codetaal):** elk bericht eindigt met een TAG in het honderdvoud:\n```\nM1 TAG:1800 / init: NV (Niet Verklaard)\nM2 TAG:2100 / init: NV\nM3 TAG:5123 / init: NV\n```\n**Regel:** tel de drie TAG-waarden uit de mailtabel op; gebruik het totaal om via de **laatste twee decimalen** een roosterplek af te leiden (tiental → rij 1–4 als A–D, eenheid → kolom 1–4 — exact zoals je interne mapping-doc het definieert). Kruis dat met Laag A en B.\n\nKopregel op het interceptblad (classificatie): **BLACK**.\n\nNiet de kluisruimte zelf is het anker — iets naast het plangebied ligt. Waar komt de werkelijkheid los van het papier?",
+  "intro": "QUEST 1 — DE KAART DIE NIET BESTAAT\n\nCampaign: black-vault\nMechanics: base XP 30 per puzzle, hidden wrong-answer decay, hint costs 5/10/20, behavior tracking enabled, persistent errors enabled, branching enabled.\n\nInterrupt signatures:\n- two_wrong_answers: Correctie gedetecteerd. Je leert sneller na fouten dan gemiddeld.\n- fast_answer: Beslissing genomen in abnormaal korte tijd. Kans op gokgedrag stijgt.\n- pattern_detected: Herhalend gedrag vastgesteld. Je begint voorspelbaar te worden.\n- mid_game: We hebben al genoeg data om je volgende keuze te voorspellen.\n\nJe ziet drie systemen in dezelfde ruimte, maar ze bevestigen elkaar niet. Zoek de plek waar energie ontbreekt, zicht ontbreekt, maar activiteit niet.",
   "puzzles": [
     {
-      "id": "bv01-p1",
-      "prompt": "PUZZLE 1 — NEGATIEVE RUIMTE\n\nContext: zoek de ene cel waar **thermiek** iets zegt, **stroom** zwijgt, en **camera** gezien de regels in de intro géén beeld levert.\n\nOpdracht: roostercel in notatie **A1 / B3 / …** (hoofdletter + cijfer, geen spaties).",
+      "id": "Q1_P1",
+      "data": {
+        "energy_kwh": [[42, 12, 9, 55], [18, 0, 41, 20]],
+        "thermal_delta": [1, 2, 6, 1],
+        "camera": ["cam", "cam", "∅", "cam"]
+      },
+      "prompt": "Drie systemen. Zelfde ruimte.\n\nEr is een plek waar:\n- energie ontbreekt\n- zicht ontbreekt\n- maar activiteit niet\n\nWaar kijk je?",
       "hints": [
-        "Richting: vergelijk rij D (thermiek) met rij B (kWh) en rij C (camera’s).",
-        "Mechaniek: ‘negatieve ruimte’ = het contrast tussen wat hoort te meten en wat **onbruikbaar / leeg** lijkt — maar wél een signaal geeft.",
-        "Startpunt: kWh=0 maar thermiek ≠ 0 op dezelfde kolom — welke kolom(en) overblijven als je ook rij C leest?"
+        "Zoek waar iets ontbreekt.",
+        "0 kWh maar wel thermiek.",
+        "Camera is daar ook leeg."
       ],
-      "wrongFeedback": "Het patroon zit om de hoek — jouw raster klopt bijna; check één kolom waar stroom ‘wegvalt’ terwijl een ander veld daar wél een verschil claimt.",
+      "wrongFeedback": "Bijna. Kijk naar de cel waar afwezigheid in meerdere bronnen tegelijk samenvalt.",
       "answer": "B3",
       "inputType": "text",
-      "xp": 28
+      "xp": 30
     },
     {
-      "id": "bv01-p2",
-      "prompt": "PUZZLE 2 — MAILTAGS → ROOSTER\n\nContext: de TAG-regels in de intro zijn homogeen (allemaal ×100). Som → laatste twee cijfers → mapping naar kolom X en rijcode Y volgens de introductie.\n\nOpdracht: noteer de cel die uit die mapping volgt (**A1–D4**,zelfde notatie als puzzel 1).",
+      "id": "Q1_P2",
+      "data": { "mail_tags": [1800, 2100, 5123] },
+      "prompt": "De getallen zijn niet afzonderlijk relevant.\n\nZe krijgen betekenis als je ze samen bekijkt.\nNiet de waarde telt. De rest wel.\n\nWaar wijzen ze naartoe?",
       "hints": [
-        "Richting: alle drie TAG’s optellen — de derde TAG is niet 2400.",
-        "Mechaniek: som eindigt op **9023** — neem de laatste twee cijfers en map: tiental=rij (1–4), eenheid=kolom (1–4).",
-        "Startpunt: de som zelf moet dezelfde cel opleveren als je thermiek/kWh/camera-cluster — tel opnieuw als je niet op **9023** uitkomt."
+        "Tel ze op.",
+        "Neem de laatste twee cijfers."
       ],
-      "wrongFeedback": "De derde TAG zit een honderdvoud hoger dan je verwacht — herlees de mailtabel en tel opnieuw tot je op **9023** uitkomt.",
+      "wrongFeedback": "Herbereken de som en map opnieuw naar hetzelfde rooster.",
       "answer": "B3",
       "inputType": "text",
-      "xp": 28
+      "xp": 30
     },
     {
-      "id": "bv01-p3",
-      "prompt": "PUZZLE 3 — VALSE AANNAME\n\nContext: iedereen zoekt naar de woordelijke kluisdeur. Jij zoekt naar **de naastgelegen** route die op tekeningen onzichtbaar wordt gehouden.\n\nOpdracht: één woord (Engels, 7 letters): wat verbindt een publieke bankhal met een achterliggende technische zone die niet als kamer genummerd staat?",
+      "id": "Q1_P3",
+      "prompt": "De kluis is zichtbaar.\nDe toegang niet.\nPersoneel gebruikt ze dagelijks.\nMaar ze bestaat niet op papier.\n\nHoe noem je zo'n doorgang?",
       "hints": [
-        "Richting: denk niet aan kluis + sleutel — denk aan **nuts** en personen die ‘onderhoud’ noemen.",
-        "Mechaniek: een vaste term voor een **bedienerstunnel / technische corridor** bij vastgoed en datacenters.",
-        "Startpunt: begint met **S**, eindigt op **E** — zeven letters."
+        "Denk operationeel, niet architectonisch.",
+        "Technische passage buiten publieke route.",
+        "Engels, 7 letters."
       ],
-      "wrongFeedback": "Je zoekt geen merknaam — een functionele bypass achter de muren, in één gangbaar Engels woord.",
+      "wrongFeedback": "Niet de kluis zelf. De verborgen operationele doorgang ernaast.",
       "answer": "SERVICE",
       "inputType": "text",
-      "xp": 28
+      "xp": 30
     }
   ],
   "preFinale": {
-    "summary": "Mechanisch: beide rekenroutes wijzen naar cel **B3**; het organisatie-verhaal wil een **SERVICE**-vector naast het officiële kluisperimeter.",
-    "implication": "De black vault ligt waar papier een muur tekent — maar sensoren fluisteren ‘door’. De volgende stap is digitale sleutels, niet een hamer."
+    "summary": "B3 komt terug via meerdere bronnen; SERVICE beschrijft de niet-geadministreerde route.",
+    "implication": "De afwijking zit niet in de kluis, maar in de manier waarop toegang buiten papier bestaat."
   },
-  "finalePrompt": "Je hebt een verborgen cel (**B3**) en een bypass-type (**SERVICE**).\n\nHoe spring je verder?\n\n• **CONTROL** — Forceer een routesegment in het bouw-BMS; je koopt tijd maar verhoogt zichtbaarheid.\n• **OBSERVE** — Kaart alleen; geen scripts—je volgt het spoor met minimale voetafdruk.\n• **INFLUENCE** — Leg een vals onderhoudspad in logs zodat echte teams uitwijken.\n\nWelk pad kies je?",
+  "finalePrompt": "Kies je aanpak:\n\nCONTROL — forceer controle op de route.\nOBSERVE — lees de sporen zonder in te grijpen.\nINFLUENCE — manipuleer data zodat anderen verkeerd lopen.\n\nWelke keuze log je?",
   "xpFinale": 75,
   "ui": {
+    "hintXpNote": "Hint tiers cost XP: 5 / 10 / 20. Hidden wrong-answer penalty and behavior tracking are active in this campaign.",
     "branches": {
-      "CONTROL": { "title": "CONTROL", "description": "Hard in het BMS — snel, luid." },
-      "OBSERVE": { "title": "OBSERVE", "description": "Alleen lezen — stil, koud." },
-      "INFLUENCE": { "title": "INFLUENCE", "description": "Misdirectie in tickets — grijs." }
+      "CONTROL": { "title": "CONTROL", "description": "future_traps: true" },
+      "OBSERVE": { "title": "OBSERVE", "description": "unlock_hidden_logs: true" },
+      "INFLUENCE": { "title": "INFLUENCE", "description": "inject_false_data: true" }
     }
   }
 }
@@ -79,53 +80,55 @@ $json$::jsonb,
     'De kluis die niet bestaat — Quest 2 — De sleutels tot niets',
     $json$
 {
-  "intro": "🛠️ QUEST 2 — VOORBEREIDING: DE SLEUTELS TOT NIETS\n\nEr is geen klassieke sleutel — alleen tijdsloten en een sleutelwoord dat per rotatie verandert.\n\n**Sleutelwoord van deze shift (herhaal zo nodig):** `BANK`\n\n**Badge-codes (Vigenère-cryptotekst, letters A–Z):**\n```\nEENX   — roster: nachtportier (blok C)\nYJIN   — roster: compliance (blok A)\nQHYF   — roster: SOC (blok B)\n```\nDecodeer elk token met het sleutelwoord hierboven (standaard Vigenère **ontcijferen**: C = (Y−K mod 26) met A=0…).\n\n**Shift-rotatie-sleutel (cijfer):** uurblokken in een cyclus van 12 uur: blok **1** = 00–04, blok **2** = 04–08, blok **3** = 08–12, blok **4** = 12–16, blok **5** = 16–20, blok **6** = 20–24. Het actieve bloknummer op **17:40** is de rotatie-index **R**.\n\n**HR-flash:** medewerker **DEAN** staat als overleden geregistreerd — toch zie je op 17:41 een geldige challenge **die dezelfde initialen gebruikt als een levend roster**.",
+  "intro": "QUEST 2 — DE SLEUTELS TOT NIETS\n\nOSINT layer: badge_dump.txt\nHidden clue: timestamp mismatch",
   "puzzles": [
     {
-      "id": "bv02-p1",
-      "prompt": "PUZZLE 1 — VIGENÈRE → NAAM\n\nContext: gebruik sleutel **BANK** herhaald op het eerste badge-token **EENX**.\n\nOpdracht: het ontcijferde token is een voornaam — noteer **hoofdletters**.",
+      "id": "Q2_P1",
+      "data": { "cipher": "EENX", "key": "BANK" },
+      "prompt": "Een naam.\nMaar alleen als je weet hoe het systeem kijkt.\n\nWie zit hierachter?",
       "hints": [
-        "Richting: alleen het eerste vierletter-token met sleutel BANK.",
-        "Mechaniek: Vigenère decrypt per letter: plat = (cipher − key + 26) mod 26.",
-        "Startpunt: eerste letter: E−B → mapping A=0… Z=25."
+        "Gebruik BANK als sleutel.",
+        "Vigenere decrypt per karakter.",
+        "Resultaat is een voornaam."
       ],
-      "wrongFeedback": "Het sleutelwoord staat vast — tel mod 26 alsof het een schuifslot is dat opnieuw uitlijnt bij elke positie.",
+      "wrongFeedback": "Je zit op de juiste methode. Controleer de sleutelrotatie per positie.",
       "answer": "DEAN",
       "inputType": "text",
       "xp": 30
     },
     {
-      "id": "bv02-p2",
-      "prompt": "PUZZLE 2 — ROTATIE-INDEX\n\nContext: blokindeling uit de intro — bepaal **R** voor kloktijd **17:40**.\n\nOpdracht: één cijfer als tekst (**5** niet vijf uitgeschreven).",
+      "id": "Q2_P2",
+      "data": { "time": "17:40", "blocks": "4h segments" },
+      "prompt": "Tijd is opgesplitst.\nNiet voor jou. Voor het systeem.\n\nWaar zit je werkelijk?",
       "hints": [
-        "Richting: 17:40 valt tussen 16:00 en 20:00.",
-        "Mechaniek: segments van 4 uur — tel vanaf middernacht welk segmentnummer dat is.",
-        "Startpunt: 16–20 is het **vijfde** segment in de 1–6-telling uit de intro."
+        "Werk met 4-uursblokken.",
+        "17:40 valt in blok 16:00-20:00.",
+        "Geef alleen het bloknummer."
       ],
-      "wrongFeedback": "Je zit in het juiste uurvenster — controleer of je de segmentgrenzen niet één blok te vroeg of laat snijdt.",
+      "wrongFeedback": "Als je CONTROL-profiel opbouwt, kan een 6 als valpad opduiken. Voor de baseline-resolutie blijft dit 5.",
       "answer": "5",
       "inputType": "text",
       "xp": 30
     },
     {
-      "id": "bv02-p3",
-      "prompt": "PUZZLE 3 — GHOST LOGIN\n\nContext: drie persona’s verschijnen na decode; eentje hoort daar **niet** levend tussen te lopen volgens HR — maar gebruikt wél een geldig patroon.\n\nOpdracht: wie is de ‘spook’-identiteit uit de eerste drie tokens (één woord voornaam, hoofdletters)?",
+      "id": "Q2_P3",
+      "prompt": "Een identiteit zou niet meer bestaan.\nMaar systemen registreren door.\n\nWelke naam bewijst dat?",
       "hints": [
-        "Richting: decodeer ook de andere twee tokens met **BANK** om te zien wie wél roster-achtig overblijft.",
-        "Mechaniek: vergelijk met de HR-flash — welke naam matcht degene die dood zou moeten zijn?",
-        "Startpunt: tel voor elk token uit wie het wordt na decode — wie botst met ‘dood’ in HR?"
+        "Koppel aan de eerdere decrypt.",
+        "Zoek de ghost identity.",
+        "Zelfde naam als puzzel 1."
       ],
-      "wrongFeedback": "De roster leest net plausibel genoeg — maar één naam botst met HR: wie is dat volgens jouw decrypts?",
+      "wrongFeedback": "De ghost identity is niet nieuw; je hebt hem al eerder gezien.",
       "answer": "DEAN",
       "inputType": "text",
       "xp": 30
     }
   ],
   "preFinale": {
-    "summary": "Mechanisch: sleutel **BANK** levert **DEAN**; rotatie-index **5**; geest-login = **DEAN** — iemand gebruikt een dode credential al binnen het slot.",
-    "implication": "Het slot test niet alleen wie jij bent — maar wie het systeem **nog** gelooft te zijn."
+    "summary": "Naam, tijdblok en ghost identity convergeren op DEAN + rotatie-index 5.",
+    "implication": "Het systeem laat inconsistenties toe zolang ze bruikbare patronen opleveren."
   },
-  "finalePrompt": "Je hebt een spook-ID en een rotatie-index.\n\n• **CONTROL** — Lock uit paniek openbreken met nood-handshake (snel, traceerbaar).\n• **OBSERVE** — Volg het slot — geen extra injections.\n• **INFLUENCE** — Injecteer een tijdelijke sleutel die andere teams naar een honeypot duwt.\n\nWat log je?",
+  "finalePrompt": "Wat doe je met ghost-credentials?\n\nCONTROL — forceer lockgedrag.\nOBSERVE — volg zonder touch.\nINFLUENCE — stuur met valse sleutelsporen.\n\nKies je pad.",
   "xpFinale": 75
 }
 $json$::jsonb,
@@ -137,53 +140,70 @@ $json$::jsonb,
     'De kluis die niet bestaat — Quest 3 — Stilte voor de fout',
     $json$
 {
-  "intro": "💥 QUEST 3 — DE DIEFSTAL: STILTE VOOR DE FOUT\n\nJe bent binnen. Het is té rustig.\n\n**Laag 1 — Binair** (8-bit-bytes, ASCII letters):\n```\n01001000 01001001 01000100 01000101\n```\n\n**Laag 2 — Morse** (letters gescheiden door `/`, spaties tussen · en −):\n```\n-- .. ... ...\n```\n\n**Laag 3 — Gedrag** — audittrail fragment (laatste kolom = status):\n```\n12:00:00 | OPEN    | OK\n12:00:30 | OPEN    | OK\n12:01:00 | OPEN    | OK\n12:01:30 | SILENT  | OK\n12:02:00 | OPEN    | OK\n```\nWelke command-string hoort bij het **eerste** gedrag dat afwijkt van het monotone patroon vóór 12:01:30?",
+  "intro": "QUEST 3 — STILTE VOOR DE FOUT\n\nAnalyse-event: mid_game.\nInterrupt: We hebben al genoeg data om je volgende keuze te voorspellen.",
   "puzzles": [
     {
-      "id": "bv03-p1",
-      "prompt": "PUZZLE 1 — BINAIR → ASCII\n\nContext: vier bytes zoals in het intro-blok; elk byte is één letter.\n\nOpdracht: het Engelse woord (hoofdletters).",
+      "id": "Q3_P1",
+      "data": "01001000 01001001 01000100 01000101",
+      "prompt": "Dit is geen code.\nDit is intentie.\n\nWat gebeurt hier?",
       "hints": [
-        "Richting: 01001000 is 72 in decimaal — welke ASCII-hoofdletter is dat?",
-        "Mechaniek: zet elk 8-bits blok om naar een decimaal en map naar ASCII.",
-        "Startpunt: na omzetting krijg je vier opeenvolgende ASCII-hoofdletters die samen een kort consolewerkwoord vormen."
+        "Converteer binair naar ASCII.",
+        "Vier bytes, vier letters.",
+        "Engels werkwoord."
       ],
-      "wrongFeedback": "De bitlengtes kloppen — je alfabetmapping is één stap van de doorbraak verwijderd.",
+      "wrongFeedback": "Bijna. Controleer bit-naar-letter mapping op bytegrenzen.",
       "answer": "HIDE",
       "inputType": "text",
-      "xp": 32
+      "xp": 30
     },
     {
-      "id": "bv03-p2",
-      "prompt": "PUZZLE 2 — MORSE\n\nContext: gebruik het morsefragment uit de intro (internationale morse).\n\nOpdracht: het Engelse woord (hoofdletters).",
+      "id": "Q3_P2",
+      "data": "-- .. ... ...",
+      "prompt": "Sneller dan woorden.\nOuder dan systemen.\n\nWat wordt bevestigd?",
       "hints": [
-        "Richting: decodeer letter voor letter — `--` is M, `..` is I, `...` is S.",
-        "Mechaniek: vier letters achter elkaar — geen cijfers.",
-        "Startpunt: vier letters; laatste twee tekens zijn een dubbel in het woord — denk aan ‘mis’ als kern."
+        "Dit is morse.",
+        "Vier letters.",
+        "Begint met M."
       ],
-      "wrongFeedback": "Het ritme is regelmatig — je bent één streep of punt van de juiste cluster af.",
+      "wrongFeedback": "Lees teken voor teken; een punt/streep-verwisseling breekt het hele woord.",
       "answer": "MISS",
       "inputType": "text",
-      "xp": 32
+      "xp": 30
     },
     {
-      "id": "bv03-p3",
-      "prompt": "PUZZLE 3 — PATROONBREUK\n\nContext: de log toont een herhalende OPEN/OK keten — tot iets anders verschijnt.\n\nOpdracht: exact het commando dat **eerst** uit de pas loopt vóór de norm weer naar OPEN springt (hoofdletters).",
+      "id": "Q3_P3",
+      "data": ["OPEN", "OPEN", "OPEN", "SILENT", "OPEN"],
+      "prompt": "Niet alles wat verandert is belangrijk.\nMaar dit wel.\n\nWaar breekt het?",
       "hints": [
-        "Richting: zoek het eerste tijdstip waar kolom 2 niet OPEN is.",
-        "Mechaniek: niet ‘OK’ — het gaat om de tweede kolom-string.",
-        "Startpunt: kijk naar kolom 2 van de eerste regel waar het gedrag breekt met een monotone OPEN-keten."
+        "Zoek de afwijking in de reeks.",
+        "Eerste niet-OPEN token.",
+        "Exact overnemen."
       ],
-      "wrongFeedback": "Je focus op statuscodes is logisch — maar de vraag wil het **command** op de afwijkende regel.",
+      "wrongFeedback": "Je zoekt de patroonbreuk, niet de meerderheid.",
       "answer": "SILENT",
       "inputType": "text",
-      "xp": 32
+      "xp": 30
+    },
+    {
+      "id": "Q3_P4",
+      "prompt": "Alarmen trekken aandacht.\nStilte verzamelt data.\n\nWat gebeurt er echt?",
+      "hints": [
+        "Denk in systeemactie, niet emotie.",
+        "Het doel is observatie van gedrag.",
+        "Kies de sterkste kernterm."
+      ],
+      "wrongFeedback": "Je zit in de juiste semantische zone. Kies de primaire systeemfunctie.",
+      "answer": "MONITORING",
+      "inputType": "choice",
+      "choices": ["MONITORING", "TRACKING", "LOGGING"],
+      "xp": 30
     }
   ],
   "preFinale": {
-    "summary": "Mechanisch: **HIDE**, **MISS**, eerste breukcommand **SILENT** — de kluis luistert; stilte is een signaal.",
-    "implication": "Geen alarm betekent hier geen vergiffenis — het betekent **meting**. Iemand kijkt mee met hoe jij naar stilte grijpt."
+    "summary": "HIDE, MISS, SILENT en MONITORING vormen een consistente gedragsmeting-keten.",
+    "implication": "Stilte is geen afwezigheid; het is een actieve meetmodus."
   },
-  "finalePrompt": "Je hebt het patroon: verbergen, missen, verstommen — allemaal telemetry.\n\nVolgende zet?\n\n• **CONTROL** — Doorbreek monitoring lokaal (risk: je triggert redundanties elders).\n• **OBSERVE** — Laat de listeners praten; jij leest alleen af.\n• **INFLUENCE** — Stuur ruis terug in hun model (vertraagt, maar verraadt je stijl).\n\nWelk pad kies je?",
+  "finalePrompt": "Analyse voltooid. Gedragspatroon opgeslagen.\n\nCONTROL — breek de lus.\nOBSERVE — laat het systeem praten.\nINFLUENCE — voer modelruis in.\n\nWelke zet registreer je?",
   "xpFinale": 75
 }
 $json$::jsonb,
@@ -192,65 +212,75 @@ $json$::jsonb,
   ),
   (
     'black-vault-04-jacht',
-    'De kluis die niet bestaat — Quest 4 — Jacht of val?',
+    'De kluis die niet bestaat — Quest 4 — Jacht of val',
     $json$
 {
-  "intro": "🚨 QUEST 4 — ONTSNAPPING: JACHT OF VAL?\n\nAlarm: globaal. Lockdown houdt mensen **binnen**, niet jou buiten.\n\n**Route-grid** ( `#` = dicht, `·` = loopbaan, **S** = jij, **X** = uitgang ):\n```\n·#···\n··#··\nS··#·\n·····\n···#X\n```\nJe mag alleen naar boven/rechts/links/onder tussen `·`-velden.\n\n**Deurcodes (hex → ASCII printable):**\n```\n48 4F 4C 44\n```\n(hoort bij ‘wat je niet doet’ tijdens een lockdown — één Engels woord).\n\n**Intercept** — fragmenten afgedrukt in vaste volgorde: **A**, dan **B**, dan **C**:\n```\nA: t+0ms  SYNC  ACK\nB: t+40ms SYNC  ACK\nC: t+20ms SYNC  ACK   (tussen 0 en 40 in)\n```\nWelk fragment staat **op de afdruk verkeerd gepositioneerd** t.o.v. de chronologie? (Als je de tijdstempels sorteert: 0 → 20 → 40, hoort het **tweede** fragment in het document niet voor het **derde** te staan.)",
+  "intro": "QUEST 4 — JACHT OF VAL",
   "puzzles": [
     {
-      "id": "bv04-p1",
-      "prompt": "PUZZLE 1 — MANHATTAN-EXIT\n\nContext: BFS/pen en papier — van **S** naar **X** in het grid uit de intro, alleen ·-cellen.\n\nOpdracht: minimale stappen als **integer** (geen eenheid).",
+      "id": "Q4_P1",
+      "data": ["·#···", "··#··", "S··#·", "·····", "···#X"],
+      "prompt": "Je mag bewegen.\nMaar vrijheid is niet hetzelfde als controle.\n\nWat is het minimum?",
       "hints": [
-        "Richting: teken het kortste pad — geen diagonaal.",
-        "Mechaniek: elke stap telt als 1; muren zijn onoverbrugbaar.",
-        "Startpunt: één optimale route heeft zes stappen."
+        "Kortste pad in het raster.",
+        "Geen diagonalen.",
+        "Trap answer is 5."
       ],
-      "wrongFeedback": "Je route is geldig maar niet minimaal — zoek waar je een omweg kunt afsnijden rond de middelste #.",
+      "wrongFeedback": "Bijna. Je moet een blokkade extra omzeilen.",
       "answer": "6",
       "inputType": "text",
-      "xp": 34
+      "xp": 30
     },
     {
-      "id": "bv04-p2",
-      "prompt": "PUZZLE 2 — HEX-TOKEN\n\nContext: vier bytes zoals gegeven — map naar ASCII-letters.\n\nOpdracht: het Engelse woord (hoofdletters).",
+      "id": "Q4_P2",
+      "data": "48 4F 4C 44",
+      "prompt": "De deur zegt niets.\nMaar de instructie wel.\n\nWat wordt verwacht?",
       "hints": [
-        "Richting: 48,4F,4C,44 in hex.",
-        "Mechaniek: elk paar hex-cijfers is één ASCII-teken.",
-        "Startpunt: 48 is ‘H’, 4F is ‘O’…"
+        "Hex naar ASCII.",
+        "Vier letters.",
+        "Begint met H."
       ],
-      "wrongFeedback": "Je decimale omzetting klopt bijna — controleer de laatste byte als letter ‘D’.",
+      "wrongFeedback": "Controleer de laatste byte opnieuw.",
       "answer": "HOLD",
       "inputType": "text",
-      "xp": 34
+      "xp": 30
     },
     {
-      "id": "bv04-p3",
-      "prompt": "PUZZLE 3 — FAKE SYNC\n\nContext: kies welk fragment uit de synchronisatie-tijdlijn haalt als monotoon oplopende tijdstempels.\n\nOpdracht: één letter (**A**, **B** of **C**).",
+      "id": "Q4_P3",
+      "data": { "A": 0, "B": 40, "C": 20 },
+      "prompt": "Volgorde is een illusie.\n\nWat klopt niet?",
       "hints": [
-        "Richting: sorteer alleen op milliseconden: A(0), C(20), B(40).",
-        "Mechaniek: vergelijk die chronologische lijst met printvolgorde A–B–C — welke letter blokkeert een ‘tussen’-tijdstempel op de verkeerde plek?",
-        "Startpunt: zet de drie regels in **tijdsvolgorde** en leg die naast printvolgorde — één label staat tussen twee anderen die chronologisch eerder hoorden."
+        "Sorteer op tijd: 0, 20, 40.",
+        "Vergelijk met de geobserveerde volgorde.",
+        "De out-of-place label is B."
       ],
-      "wrongFeedback": "Alle drie zijn technisch geldige ACK’s — richt je op **documentpositie** versus **tijdsorde**.",
+      "wrongFeedback": "Kijk naar de positie, niet alleen naar de waarden.",
       "answer": "B",
       "inputType": "choice",
       "choices": ["A", "B", "C"],
-      "xp": 34
+      "xp": 30
+    },
+    {
+      "id": "Q4_P4",
+      "prompt": "Je dacht dat je ontsnapte.\nMaar je werd geselecteerd.\n\nWaarvoor?",
+      "hints": [
+        "Systeemdoel, geen menselijk motief.",
+        "Denk in classificatie.",
+        "Kernwoord: FILTER."
+      ],
+      "wrongFeedback": "Je antwoord zit dichtbij: het gaat om selectie als mechanisme.",
+      "answer": "FILTER",
+      "inputType": "choice",
+      "choices": ["FILTER", "SELECTION"],
+      "xp": 30
     }
   ],
   "preFinale": {
-    "summary": "Mechanisch: kortste route = **6** stappen; hex = **HOLD**; inconsistente sync = **B** — je zat in een georkestreerde proef.",
-    "implication": "De lockdown was geen fout — hij sorteerde spelers. Nu kies je wat je met de waarheid doet."
+    "summary": "Pad, instructie, volgorde-anomalie en selectieclaim vormen een testketen.",
+    "implication": "Jacht en val blijken hetzelfde systeemproces vanuit verschillende perspectieven."
   },
-  "finalePrompt": "Je hebt routes, tokens, en gefabriceerde comm.\n\nDrie scenario’s — allemaal zonder ‘veilige’ winnaar:\n\n• **CONTROL** — **Vluchten met de data** — fysiek de drag mee; je bent zichtbaar maar onafhankelijk.\n• **INFLUENCE** — **Uploaden & blootleggen** — spreid het bewijs; je markeert jezelf als openlijke bron.\n• **OBSERVE** — **Alles wissen & verdwijnen** — minimal footprint; maar wie denkt dan voor je na?\n\nWelke keuze leg je vast?",
-  "xpFinale": 75,
-  "ui": {
-    "branches": {
-      "CONTROL": { "title": "Met de data vluchten", "description": "CONTROL — spoorbaar, agressief." },
-      "INFLUENCE": { "title": "Publiceren", "description": "INFLUENCE — waarheid als wapen." },
-      "OBSERVE": { "title": "Wissen & verdwijnen", "description": "OBSERVE — geen nalatenschap." }
-    }
-  }
+  "finalePrompt": "Wat doe je met het systeem dat jou selecteerde?\n\nCONTROL — stap erin.\nOBSERVE — verdwijn uit zicht.\nINFLUENCE — blijf, maar gemarkeerd.\n\nWelke keuze registreer je?",
+  "xpFinale": 75
 }
 $json$::jsonb,
     false,
@@ -258,62 +288,63 @@ $json$::jsonb,
   ),
   (
     'black-vault-05-waarheid',
-    'De kluis die niet bestaat — Quest 5 — De kluiskraak: de waarheid',
+    'De kluis die niet bestaat — Quest 5 — De waarheid',
     $json$
 {
-  "intro": "🧨 QUEST 5 — SLOT: DE WAARHEID\n\nDe kluis beschermde geen goud — ze **registreerde** wie slim genoeg was om binnen te komen.\n\n**Checksum A1Z26:** tel de posities van de letters in **VIREX** (A=1 … Z=26).\n\n**Operationele sleutel (interne memo):** het bandlabel **SEDEK** = **S**ynthetic **E**dge **D**ata **E**ncryption **K**ernel — de softwarelaag waarmee jouw sessie werd vastgezet. Letters **S-E-D-E-K** komen overeen met de eerste letters van:\n- **S** van **SILENT** (breukcommand Quest 3)\n- **E** = 2e letter van **DEAN**\n- **D** = 3e letter van **HIDE**\n- **E** = 4e letter van **VIREX**\n- **K** = 5e letter van **BLACK** (projectcodenaam uit het eerste dossier)\n(zie raw tokens in je notities — **BLACK** stond als werknaam voor het black-vault-programma op het openingsblad).",
+  "intro": "QUEST 5 — DE WAARHEID\n\nJe aarzelde bij cruciale momenten.\nJe koos vaker voor controle dan voor observatie.\nJe fouten daalden naarmate je verder ging.\nDat betekent dat je leert.\nDat betekent dat je bruikbaar bent.",
   "puzzles": [
     {
-      "id": "bv05-p1",
-      "prompt": "PUZZLE 1 — VIREX-SOM\n\nContext: A1Z26 op **VIREX** exact zoals in de intro beschreven.\n\nOpdracht: de som als decimale tekst zonder suffix (bijv. **78**).",
+      "id": "Q5_P1",
+      "data": "VIREX",
+      "prompt": "Geen naam.\nEen sleutel.\n\nWat is zijn waarde?",
       "hints": [
-        "Richting: alleen V, I, R, E, X.",
-        "Mechaniek: A1Z26 per letter, daarna optellen.",
-        "Startpunt: V en R zijn de zwaargewichten in de som."
+        "A1Z26.",
+        "Som van letters.",
+        "Uitkomst is 78."
       ],
-      "wrongFeedback": "Je telt letters alsof het een checksum is — vergeet geen positie voor de X niet.",
+      "wrongFeedback": "Controleer de letterposities opnieuw, inclusief X.",
       "answer": "78",
       "inputType": "text",
-      "xp": 36
+      "xp": 30
     },
     {
-      "id": "bv05-p2",
-      "prompt": "PUZZLE 2 — META-STRING\n\nContext: gebruik exact de compositie in de slotvraag van deze quest-intro (letters 1 van SILENT, 2 van DEAN, 3 van HIDE, 4 van VIREX, 5 van BLACK).\n\nOpdracht: het resulterende vijfletterwoord (hoofdletters).",
+      "id": "Q5_P2",
+      "prompt": "Alles wat je nodig had was verspreid.\nNiet verborgen. Niet duidelijk.\n\nWat vormt zich als je het samenbrengt?",
       "hints": [
-        "Richting: geen anagram — vaste posities uit de vijf bronwoorden.",
-        "Mechaniek: SILENT₁, DEAN₂, HIDE₃, VIREX₄, BLACK₅.",
-        "Startpunt: het vijfde bronwoord vind je als dossierkop **BLACK** aan het begin van Quest 1."
+        "Gebruik de samengestelde sleutel.",
+        "Vijf letters.",
+        "Begint met S."
       ],
-      "wrongFeedback": "De volgorde zit vast — als je een letter uit het verkeerde bronwoord pakt, voelt het woord bijna Nederlands maar klopt het slot niet.",
+      "wrongFeedback": "Het is geen anagram; het is een geconstrueerde sleutelstring.",
       "answer": "SEDEK",
       "inputType": "text",
-      "xp": 36
+      "xp": 30
     },
     {
-      "id": "bv05-p3",
-      "prompt": "PUZZLE 3 — WAT BEN JE GEWORDEN?\n\nContext: de vault was geen kluis — ze was een **filter**. Iedereen die de keten helder doorliep werd opgeslagen als profiel.\n\nOpdracht: één Engels woord (9 letters, hoofdletters): wat juridisch en technisch gebeurt wanneer jouw naam in zo’n dossier wordt opgenomen na een geslaagde sessie?",
+      "id": "Q5_P3",
+      "prompt": "Je hebt niets gebroken.\nJe hebt niets gestolen.\nJe hebt alleen gedaan wat verwacht werd.\n\nWat ben je nu?",
       "hints": [
-        "Richting: niet ‘hack’ — denk aan inschrijven, indexeren.",
-        "Mechaniek: synoniem voor ‘in de administratie gezet worden’.",
-        "Startpunt: begint met **R**, eindigt met **D**."
+        "Systeemstatus, niet identiteit.",
+        "Engels woord.",
+        "Begint met R."
       ],
-      "wrongFeedback": "Je zoekt geen geldboete — maar wat er met jouw identiteitsrecord gebeurt in een watchlist-context.",
+      "wrongFeedback": "Denk aan hoe systemen iemand markeren na succesvolle deelname.",
       "answer": "REGISTERED",
       "inputType": "text",
-      "xp": 36
+      "xp": 30
     }
   ],
   "preFinale": {
-    "summary": "Mechanisch: checksum **78**; meta-token **SEDEK** (vast patroon over eerdere quest-antwoorden); het slot bevestigt dat je **REGISTERED** bent — niet beroofd, maar **geïndexeerd**.",
-    "implication": "VIREX is geen kluis-deur; het is een meetsysteem. Jij bent de meting geworden."
+    "summary": "VIREX -> 78, sleutelstring -> SEDEK, status -> REGISTERED.",
+    "implication": "De kluis beschermde geen object. Ze profileerde deelnemers."
   },
-  "finalePrompt": "Je weet het: de vault was een test.\n\n**Kies je slot in het echte systeem:**\n\n• **CONTROL** — **Word onderdeel** — je krijgt hefbomen, maar accepteert hun regels.\n• **OBSERVE** — **Vernietigen** — brand de index af; chaos, maar niemand speelt meer dit spel.\n• **INFLUENCE** — **Grijs gebruik** — je houdt toegang, maar blijft manipuleren.\n\nWat log je als eindbearing?",
+  "finalePrompt": "CONTROL — Je wordt onderdeel van het systeem.\nOBSERVE — Je verdwijnt uit het systeem.\nINFLUENCE — Je blijft, maar wordt gemarkeerd.\n\nWat kies je als eindstatus?",
   "xpFinale": 100,
   "ui": {
     "branches": {
-      "CONTROL": { "title": "Deelnemen", "description": "CONTROL — macht met keten." },
-      "OBSERVE": { "title": "Vernietigen", "description": "OBSERVE — vrijheid door brand." },
-      "INFLUENCE": { "title": "Instrumentaliseren", "description": "INFLUENCE — grijs, gevaarlijk." }
+      "CONTROL": { "title": "CONTROL", "description": "Je wordt onderdeel van het systeem." },
+      "OBSERVE": { "title": "OBSERVE", "description": "Je verdwijnt uit het systeem." },
+      "INFLUENCE": { "title": "INFLUENCE", "description": "Je blijft, maar wordt gemarkeerd." }
     }
   }
 }
@@ -329,7 +360,7 @@ set
   archived = excluded.archived,
   updated_at = now();
 
--- Campaign koppeling (lineair: alle finale-takken →zelfde vervolg)
+-- Campaign koppeling (lineair: alle finale-takken -> zelfde vervolg)
 update public.quests
 set
   campaign_slug = 'black-vault',

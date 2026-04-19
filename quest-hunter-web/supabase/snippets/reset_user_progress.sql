@@ -1,0 +1,60 @@
+-- Reset user progress helpers (Quest Hunter)
+-- Run manually in Supabase SQL Editor as service role / DB owner.
+-- Safe defaults: nothing runs until you uncomment a block.
+
+-- =========================================================
+-- A) RESET ONE USER (progress + attempts + xp/lives)
+-- =========================================================
+-- begin;
+--
+-- with target as (
+--   select '00000000-0000-0000-0000-000000000000'::uuid as uid
+-- )
+-- delete from public.answer_attempts a
+-- using target t
+-- where a.user_id = t.uid;
+--
+-- with target as (
+--   select '00000000-0000-0000-0000-000000000000'::uuid as uid
+-- )
+-- delete from public.user_quest_progress u
+-- using target t
+-- where u.user_id = t.uid;
+--
+-- with target as (
+--   select '00000000-0000-0000-0000-000000000000'::uuid as uid
+-- )
+-- update public.profiles p
+--    set xp = 0,
+--        lives = 5,
+--        next_life_at = null,
+--        updated_at = now()
+--   from target t
+--  where p.id = t.uid;
+--
+-- commit;
+
+-- =========================================================
+-- B) RESET ALL USERS (global wipe)
+-- =========================================================
+-- begin;
+--
+-- delete from public.answer_attempts;
+-- delete from public.user_quest_progress;
+--
+-- update public.profiles
+--    set xp = 0,
+--        lives = 5,
+--        next_life_at = null,
+--        updated_at = now();
+--
+-- commit;
+
+-- =========================================================
+-- C) RESET ALL USERS FOR ONE CAMPAIGN ONLY
+--    (uses existing function from migration 20260422100000)
+-- =========================================================
+-- select public.reset_campaign_quest_progress_admin('project-oracle');
+-- select public.reset_campaign_quest_progress_admin('project-echo');
+-- select public.reset_campaign_quest_progress_admin('black-vault');
+-- select public.reset_campaign_quest_progress_admin('protocol-17');
