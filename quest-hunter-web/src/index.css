@@ -156,22 +156,20 @@ a:focus-visible {
 .top-bar {
   display: flex;
   align-items: center;
-  gap: 0.65rem;
-  min-height: calc(var(--touch-min) + env(safe-area-inset-top, 0px));
-  padding: max(0.55rem, env(safe-area-inset-top)) max(0.85rem, env(safe-area-inset-right)) 0.55rem
-    max(0.85rem, env(safe-area-inset-left));
-  border-bottom: 2px solid rgba(42, 46, 61, 0.85);
-  background: linear-gradient(
-    180deg,
-    rgba(10, 12, 22, 0.97) 0%,
-    rgba(6, 7, 12, 0.94) 40%,
-    rgba(8, 9, 14, 0.92) 100%
-  );
-  backdrop-filter: blur(16px) saturate(1.25);
+  gap: 0.58rem;
+  min-height: calc(var(--touch-min) + 0.35rem);
+  margin: max(0.35rem, env(safe-area-inset-top)) max(0.7rem, env(safe-area-inset-right)) 0.45rem
+    max(0.7rem, env(safe-area-inset-left));
+  padding: 0.5rem 0.7rem;
+  border: 2px solid rgba(47, 53, 72, 0.95);
+  border-radius: var(--radius-xl);
+  background:
+    var(--panel-edge),
+    var(--panel-bg);
   box-shadow:
-    0 2px 0 rgba(61, 255, 122, 0.08),
-    0 18px 48px rgba(0, 0, 0, 0.55),
-    0 0 80px rgba(151, 71, 255, 0.12);
+    0 0 0 1px rgba(0, 0, 0, 0.55) inset,
+    0 18px 44px rgba(0, 0, 0, 0.42),
+    0 0 72px rgba(151, 71, 255, 0.08);
   position: sticky;
   top: 0;
   z-index: 40;
@@ -203,14 +201,14 @@ a:focus-visible {
 
 .nav-menu-btn {
   display: inline-flex;
-  margin-left: auto;
+  margin-left: 0;
   align-items: center;
   justify-content: center;
   width: var(--touch-min);
   height: var(--touch-min);
   padding: 0;
-  border: 2px solid rgba(61, 255, 122, 0.3);
-  border-radius: var(--radius-md);
+  border: 2px solid rgba(47, 53, 72, 0.95);
+  border-radius: var(--radius-lg);
   background: linear-gradient(165deg, rgba(18, 22, 34, 0.9) 0%, rgba(6, 8, 12, 0.94) 100%);
   color: var(--text);
   cursor: pointer;
@@ -2628,30 +2626,38 @@ a:focus-visible {
 
 .top-avatar {
   margin-left: auto;
-  width: 1.9rem;
-  height: 1.9rem;
-  border-radius: 0.62rem;
+  width: var(--touch-min);
+  height: var(--touch-min);
+  border-radius: var(--radius-lg);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.68rem;
+  font-size: 0.8rem;
   color: var(--accent-hot);
-  border: 1px solid rgba(82, 255, 154, 0.38);
-  background:
-    radial-gradient(circle at 20% 15%, rgba(88, 237, 255, 0.35), transparent 42%),
-    linear-gradient(150deg, rgba(163, 100, 255, 0.36), rgba(10, 13, 20, 0.9));
-  box-shadow: 0 0 18px rgba(82, 255, 154, 0.12);
-}
-
-.top-avatar + .nav-menu-btn {
-  margin-left: 0.55rem;
+  border: 2px solid rgba(47, 53, 72, 0.95);
+  background: linear-gradient(165deg, rgba(18, 22, 34, 0.9) 0%, rgba(6, 8, 12, 0.94) 100%);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.45) inset,
+    0 8px 24px rgba(0, 0, 0, 0.35);
 }
 
 .top-theme-btn {
-  min-height: 1.9rem;
-  padding: 0.22rem 0.55rem;
-  border-radius: 0.58rem;
-  margin-left: 0.4rem;
+  width: var(--touch-min);
+  height: var(--touch-min);
+  min-height: var(--touch-min);
+  padding: 0;
+  border-radius: var(--radius-lg);
+  margin-left: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-color: rgba(47, 53, 72, 0.95);
+  border-width: 2px;
+  background: linear-gradient(165deg, rgba(18, 22, 34, 0.9) 0%, rgba(6, 8, 12, 0.94) 100%);
+  color: var(--text);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.45) inset,
+    0 8px 24px rgba(0, 0, 0, 0.35);
 }
 
 .campaign-progress {
@@ -3120,14 +3126,18 @@ a:focus-visible {
   }
 
   .top-avatar {
-    width: 1.8rem;
-    height: 1.8rem;
-    border-radius: 0.56rem;
+    width: var(--touch-min);
+    height: var(--touch-min);
+    border-radius: var(--radius-md);
   }
 
   .top-theme-btn {
     margin-left: 0.3rem;
-    padding: 0.2rem 0.48rem;
+    width: var(--touch-min);
+    height: var(--touch-min);
+    min-height: var(--touch-min);
+    padding: 0;
+    border-radius: var(--radius-md);
   }
 
   .campaign-progress-track {
